@@ -11,9 +11,13 @@ export async function getLatest(gameId?: LotteryGameId) {
   const settled = await Promise.all(
     selected.map(async (adapter) => {
       if (!adapter) return null;
-      const result = await adapter.getLatest();
-      warnings.push(...result.warnings);
-      return result.data;
+      try {
+        const result = await adapter.getLatest();
+        warnings.push(...result.warnings);
+        return result.data;
+      } catch {
+        return null;
+      }
     })
   );
 

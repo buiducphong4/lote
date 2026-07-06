@@ -1,4 +1,4 @@
-import * as cheerio from "cheerio";
+﻿import * as cheerio from "cheerio";
 import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
@@ -11,6 +11,16 @@ const config: Record<VietlottGameId, { slug: string; technicalId: string; mainCo
   vietlott_lotto_535: { slug: "535", technicalId: "power_535", mainCount: 5 },
   vietlott_power_655: { slug: "655", technicalId: "power_655", mainCount: 6 },
   vietlott_mega_645: { slug: "645", technicalId: "power_645", mainCount: 6 }
+};
+
+const vietlottHtmlHeaders = {
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  Referer: "https://vietlott.vn/",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 };
 
 export function createVietlottAdapter(gameId: VietlottGameId): LotteryAdapter {
@@ -26,8 +36,8 @@ export function createVietlottAdapter(gameId: VietlottGameId): LotteryAdapter {
         const warnings: string[] = [];
 
         try {
-          const response = await fetchWithTimeout(sourceUrl, {
-            headers: { Accept: "text/html,application/xhtml+xml" }
+          const response = await fetchWithTimeout(`${sourceUrl}?nocatche=${Date.now()}`, {
+            headers: vietlottHtmlHeaders
           });
           const html = await response.text();
           return { data: parseOfficialVietlott(html, gameId, sourceUrl), warnings };
@@ -35,9 +45,13 @@ export function createVietlottAdapter(gameId: VietlottGameId): LotteryAdapter {
           warnings.push("Nguon Vietlott thay doi cau truc, can cap nhat parser.");
         }
 
-        const fallback = await readVietlottJsonl(gameId);
-        warnings.push("Dang dung du lieu lich su cong dong tu vietvudanh/vietlott-data.");
-        return { data: fallback[0] ?? null, warnings };
+        try {
+          const fallback = await readVietlottJsonl(gameId);
+          warnings.push("Dang dung du lieu lich su cong dong tu vietvudanh/vietlott-data.");
+          return { data: fallback[0] ? await enrichVietlottDraw(gameId, fallback[0]) : null, warnings };
+        } catch {
+          return { data: null, warnings };
+        }
       });
     },
     async getHistory(query = {}) {
@@ -162,7 +176,7 @@ async function enrichVietlottDraw(gameId: VietlottGameId, draw: LotteryDraw) {
 
       const detailUrl = `${game.sourceUrl}?id=${encodeURIComponent(draw.drawNo ?? "")}&nocatche=1`;
       const response = await fetchWithTimeout(detailUrl, {
-        headers: { Accept: "text/html,application/xhtml+xml" }
+        headers: vietlottHtmlHeaders
       });
       const html = await response.text();
       const official = parseOfficialVietlott(html, gameId, detailUrl);
@@ -214,8 +228,8 @@ function removeVietnameseMarks(value: string) {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "D")
     .toLowerCase();
 }
 
