@@ -6,6 +6,9 @@ import { Warnings } from "@/components/lottery/Warnings";
 import { Button } from "@/components/ui/button";
 import { getGames, getLatest } from "@/lib/lottery/service";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function HomePage() {
   const [games, latest] = await Promise.all([getGames(), getLatest()]);
 

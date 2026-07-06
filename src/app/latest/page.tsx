@@ -5,6 +5,9 @@ import { Warnings } from "@/components/lottery/Warnings";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getGames, getLatest, parseGameId } from "@/lib/lottery/service";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function LatestPage({
   searchParams
 }: {

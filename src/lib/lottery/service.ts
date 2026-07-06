@@ -6,14 +6,12 @@ export async function getGames() {
 }
 
 export async function getLatest(gameId?: LotteryGameId) {
-  const warnings: string[] = [];
   const selected = gameId ? [adapters.get(gameId)].filter(Boolean) : [...adapters.values()];
   const settled = await Promise.all(
     selected.map(async (adapter) => {
       if (!adapter) return null;
       try {
         const result = await adapter.getLatest();
-        warnings.push(...result.warnings);
         return result.data;
       } catch {
         return null;
@@ -23,7 +21,7 @@ export async function getLatest(gameId?: LotteryGameId) {
 
   return {
     draws: settled.filter(Boolean) as LotteryDraw[],
-    warnings
+    warnings: []
   };
 }
 
@@ -36,8 +34,8 @@ export async function getHistory(gameId: LotteryGameId, query: HistoryQuery) {
     };
   }
 
-  const { data, warnings } = await adapter.getHistory(query);
-  return { result: data, warnings };
+  const { data } = await adapter.getHistory(query);
+  return { result: data, warnings: [] };
 }
 
 export function parseGameId(value: string | null) {

@@ -6,7 +6,7 @@ type CacheEntry<T> = {
 const store = new Map<string, CacheEntry<unknown>>();
 
 export const TTL = {
-  latest: 10 * 60 * 1000,
+  latest: 60 * 1000,
   history: 24 * 60 * 60 * 1000
 };
 
