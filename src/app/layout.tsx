@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
-import { BarChart3, History, Home, Sparkles } from "lucide-react";
+import { History, Home, Sparkles } from "lucide-react";
 import "@/styles/globals.css";
 import { ThemeToggle } from "@/components/lottery/ThemeToggle";
 
@@ -15,8 +15,7 @@ export const metadata: Metadata = {
 const navItems = [
   { href: "/", label: "Tổng quan", icon: Home },
   { href: "/latest", label: "Mới nhất", icon: Sparkles },
-  { href: "/history", label: "Lịch sử", icon: History },
-  { href: "/statistics", label: "Thống kê", icon: BarChart3 }
+  { href: "/history", label: "Lịch sử", icon: History }
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -31,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
               <span className="text-sm font-semibold">Lote</span>
             </Link>
-            <nav className="order-3 grid w-full grid-cols-4 gap-1 sm:order-none sm:ml-auto sm:w-auto sm:flex sm:items-center" aria-label="Điều hướng chính">
+            <nav className="order-3 grid w-full grid-cols-3 gap-1 sm:order-none sm:ml-auto sm:w-auto sm:flex sm:items-center" aria-label="Điều hướng chính">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (

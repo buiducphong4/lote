@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { ArrowRight, History, ShieldCheck } from "lucide-react";
 import { JackpotOverview } from "@/components/lottery/JackpotOverview";
 import { RefreshButton } from "@/components/lottery/RefreshButton";
@@ -42,7 +42,7 @@ export default async function HomePage() {
       <section className="glass rounded-lg p-3 text-sm text-muted-foreground sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Thong ke chi mang tinh tham khao. Hay doi chieu voi nguon chinh thuc truoc khi nhan thuong.
+            Du lieu chi mang tinh tham khao. Hay doi chieu voi nguon chinh thuc truoc khi nhan thuong.
           </p>
           <Button className="w-full sm:w-auto" variant="outline" asChild>
             <Link href="/latest">

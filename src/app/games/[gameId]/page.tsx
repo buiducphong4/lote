@@ -1,8 +1,7 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import { DrawCard } from "@/components/lottery/DrawCard";
 import { HistoryTable } from "@/components/lottery/HistoryTable";
 import { RefreshButton } from "@/components/lottery/RefreshButton";
-import { StatisticsPanel } from "@/components/lottery/StatisticsPanel";
 import { Warnings } from "@/components/lottery/Warnings";
 import { getGame } from "@/lib/lottery/games";
 import { getHistory, getLatest, parseGameId } from "@/lib/lottery/service";
@@ -38,7 +37,6 @@ export default async function GameDetailPage({
 
       <Warnings warnings={[...latest.warnings, ...history.warnings]} />
       {draw ? <DrawCard draw={draw} featured /> : null}
-      <StatisticsPanel draws={history.result.draws} />
       <HistoryTable result={history.result} />
     </div>
   );
