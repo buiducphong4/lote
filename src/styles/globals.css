@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 42 38% 96%;
+  --foreground: 217 36% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 217 36% 12%;
+  --muted: 218 20% 91%;
+  --muted-foreground: 218 12% 38%;
+  --accent: 169 55% 40%;
+  --accent-foreground: 0 0% 100%;
+  --primary: 218 42% 18%;
+  --primary-foreground: 0 0% 100%;
+  --border: 218 18% 84%;
+  --input: 218 18% 84%;
+  --ring: 169 55% 40%;
+}
+
+.dark {
+  --background: 219 38% 7%;
+  --foreground: 210 30% 96%;
+  --card: 221 31% 11%;
+  --card-foreground: 210 30% 96%;
+  --muted: 220 20% 18%;
+  --muted-foreground: 216 15% 70%;
+  --accent: 172 52% 48%;
+  --accent-foreground: 219 38% 7%;
+  --primary: 210 30% 96%;
+  --primary-foreground: 219 38% 7%;
+  --border: 220 19% 22%;
+  --input: 220 19% 22%;
+  --ring: 172 52% 48%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(circle at 18% 12%, rgba(34, 197, 177, 0.16), transparent 26rem),
+    radial-gradient(circle at 84% 8%, rgba(197, 163, 78, 0.14), transparent 24rem),
+    linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted)));
+}
+
+.dark body {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(45, 212, 191, 0.12), transparent 28rem),
+    radial-gradient(circle at 86% 12%, rgba(251, 191, 36, 0.08), transparent 24rem),
+    linear-gradient(135deg, #070b14 0%, #111827 48%, #171717 100%);
+}
+
+::selection {
+  background: rgba(45, 212, 191, 0.28);
+}
+
+.glass {
+  background: color-mix(in srgb, hsl(var(--card)) 72%, transparent);
+  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.dark .glass {
+  background: rgba(15, 23, 42, 0.62);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+}
