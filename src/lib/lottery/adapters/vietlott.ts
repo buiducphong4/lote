@@ -60,7 +60,10 @@ function parseOfficialVietlott(html: string, gameId: VietlottGameId, sourceUrl?:
 
   const $ = cheerio.load(html);
   const fullText = $("body").text().replace(/\s+/g, " ");
-  const drawMatch = fullText.match(/Kỳ quay thưởng\s*#?(\d+)\s*ngày\s*(\d{2}\/\d{2}\/\d{4})/i);
+  const titleText = $(".chitietketqua_title").text().replace(/\s+/g, " ");
+  const drawMatch =
+    titleText.match(/#\s*(\d+).*?(\d{2}\/\d{2}\/\d{4})/i) ??
+    fullText.match(/#\s*(\d+).*?(\d{2}\/\d{2}\/\d{4})/i);
   const numberTexts = $(".day_so_ket_qua_v2 span.bong_tron")
     .map((_, element) => $(element).text().trim())
     .get();
@@ -203,8 +206,17 @@ function paginate(draws: LotteryDraw[], query: HistoryQuery): HistoryResult {
 function jackpotFromPrizeTable(
   prizeTable: NonNullable<LotteryDraw["prizeTable"]>
 ): string | number | null {
-  const jackpotRow = prizeTable.find((row) => /jackpot|doc dac|độc đặc/i.test(row.tier));
+  const jackpotRow = prizeTable.find((row) => /jackpot|doc dac|dac biet/i.test(removeVietnameseMarks(row.tier)));
   return jackpotRow?.prize ?? prizeTable[0]?.prize ?? null;
+}
+
+function removeVietnameseMarks(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
 }
 
 function normalizeVndPrize(value: string) {

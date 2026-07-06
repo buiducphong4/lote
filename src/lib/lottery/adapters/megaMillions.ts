@@ -39,7 +39,14 @@ async function loadMegaMillionsDraws(socrataQuery: string) {
       .map((row) => normalizeMegaMillions(row, game))
       .sort((a, b) => b.drawDate.localeCompare(a.drawDate));
 
-    if (draws.length) return { draws, warnings };
+    if (draws.length) {
+      const enrichedDraws = await enrichMegaMillionsJackpots(draws);
+      if (enrichedDraws.some((draw) => draw.jackpot)) {
+        return { draws: enrichedDraws, warnings };
+      }
+      warnings.push("Mega Millions chua lay duoc jackpot tu Texas Lottery; dang hien thi bo so tu NY Open Data.");
+      return { draws, warnings };
+    }
   } catch {
     warnings.push("NY Open Data dang chan Mega Millions; dang dung nguon Texas Lottery.");
   }
@@ -49,6 +56,27 @@ async function loadMegaMillionsDraws(socrataQuery: string) {
     warnings.push("Texas Lottery tam thoi khong tra du lieu Mega Millions; vui long thu lai sau.");
   }
   return { draws: texasDraws, warnings };
+}
+
+async function enrichMegaMillionsJackpots(draws: LotteryDraw[]) {
+  const texasDraws = await fetchTexasMegaMillions().catch(() => [] as LotteryDraw[]);
+  if (!texasDraws.length) return draws;
+
+  const texasByDate = new Map(texasDraws.map((draw) => [draw.drawDate, draw]));
+
+  return draws.map((draw) => {
+    const texas = texasByDate.get(draw.drawDate);
+    if (!texas?.jackpot) return draw;
+
+    return {
+      ...draw,
+      jackpot: texas.jackpot,
+      prizeTable: texas.prizeTable ?? draw.prizeTable,
+      sourceName: `${draw.sourceName} + Texas Lottery`,
+      sourceUrl: texas.sourceUrl,
+      updatedAt: texas.updatedAt
+    };
+  });
 }
 
 async function fetchMegaMillionsRows(query: string) {
