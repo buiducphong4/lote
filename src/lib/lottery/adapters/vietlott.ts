@@ -7,10 +7,31 @@ import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw, LotteryG
 
 type VietlottGameId = Extract<LotteryGameId, "vietlott_lotto_535" | "vietlott_power_655" | "vietlott_mega_645">;
 
-const config: Record<VietlottGameId, { slug: string; technicalId: string; mainCount: number }> = {
-  vietlott_lotto_535: { slug: "535", technicalId: "power_535", mainCount: 5 },
-  vietlott_power_655: { slug: "655", technicalId: "power_655", mainCount: 6 },
-  vietlott_mega_645: { slug: "645", technicalId: "power_645", mainCount: 6 }
+const config: Record<
+  VietlottGameId,
+  { slug: string; technicalId: string; mainCount: number; minhNgocPath: string; minhNgocSelector: string }
+> = {
+  vietlott_lotto_535: {
+    slug: "535",
+    technicalId: "power_535",
+    mainCount: 5,
+    minhNgocPath: "lotto535",
+    minhNgocSelector: ".xslotto535"
+  },
+  vietlott_power_655: {
+    slug: "655",
+    technicalId: "power_655",
+    mainCount: 6,
+    minhNgocPath: "power",
+    minhNgocSelector: ".xspower"
+  },
+  vietlott_mega_645: {
+    slug: "645",
+    technicalId: "power_645",
+    mainCount: 6,
+    minhNgocPath: "mega",
+    minhNgocSelector: ".xsmega"
+  }
 };
 
 const vietlottHtmlHeaders = {
@@ -42,12 +63,17 @@ export function createVietlottAdapter(gameId: VietlottGameId): LotteryAdapter {
           const html = await response.text();
           return { data: parseOfficialVietlott(html, gameId, sourceUrl), warnings };
         } catch {
-          warnings.push("Nguon Vietlott thay doi cau truc, can cap nhat parser.");
+          // Vercel can be blocked by Vietlott, so keep a second live source before falling back to JSONL.
+        }
+
+        try {
+          return { data: await readMinhNgocLatest(gameId), warnings };
+        } catch {
+          // Keep the UI quiet and continue to the community history fallback.
         }
 
         try {
           const fallback = await readVietlottJsonl(gameId);
-          warnings.push("Dang dung du lieu lich su cong dong tu vietvudanh/vietlott-data.");
           return { data: fallback[0] ? await enrichVietlottDraw(gameId, fallback[0]) : null, warnings };
         } catch {
           return { data: null, warnings };
@@ -153,6 +179,80 @@ async function readVietlottJsonl(gameId: VietlottGameId) {
     .sort((a, b) => b.drawDate.localeCompare(a.drawDate) || (b.drawNo ?? "").localeCompare(a.drawNo ?? ""));
 }
 
+async function readMinhNgocLatest(gameId: VietlottGameId) {
+  const game = getGame(gameId);
+  if (!game) throw new Error(`Unknown Vietlott game: ${gameId}`);
+
+  const details = config[gameId];
+  const sourceUrl = `https://xosominhngoc.net.vn/${details.minhNgocPath}`;
+  const response = await fetchWithTimeout(sourceUrl, {
+    headers: {
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Referer: "https://xosominhngoc.net.vn/"
+    }
+  });
+  const $ = cheerio.load(await response.text());
+  const root = $(details.minhNgocSelector).first();
+
+  if (!root.length) {
+    throw new Error("Minh Ngoc fallback missing result container.");
+  }
+
+  const drawNo = normalizeDrawNo(root.find(".kyve").first().text());
+  const dateText = root.find(".ngay").first().text();
+  const dateMatch = dateText.match(/(\d{2}\/\d{2}\/\d{4})/);
+  const numberTexts = root
+    .find(".result .kq")
+    .map((_, element) => $(element).attr("data") ?? $(element).text())
+    .get();
+  const numbers = numberTexts.map((value) => Number(String(value).trim())).filter(Number.isFinite);
+  const mainCount = details.mainCount;
+
+  if (!drawNo || !dateMatch || numbers.length < mainCount) {
+    throw new Error("Minh Ngoc fallback missing draw number, date, or numbers.");
+  }
+
+  const prizeTable = root
+    .find("table tbody tr")
+    .map((_, row) => {
+      const cells = $(row)
+        .find("td")
+        .map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim())
+        .get();
+      if (cells.length < 4) return null;
+      return {
+        tier: cells[0],
+        match: cells[1],
+        winners: parseVietnameseNumber(cells[2]),
+        prize: normalizeVndPrize(cells[3])
+      };
+    })
+    .get()
+    .filter(Boolean);
+  const mainNumbers = numbers.slice(0, mainCount);
+  const extraNumbers = numbers.slice(mainCount);
+  const jackpot = readMinhNgocPrize(root.find(".jackpot").first().attr("data"), root.find(".jackpot").first().text());
+  const jackpot2 = readMinhNgocPrize(root.find(".jackpot2").first().attr("data"), root.find(".jackpot2").first().text());
+
+  return {
+    id: `${gameId}-${drawNo}`,
+    gameId,
+    region: "VN" as const,
+    gameName: game.name,
+    drawDate: toIsoDate(dateMatch[1]),
+    drawNo,
+    mainNumbers,
+    bonusNumbers: gameId === "vietlott_lotto_535" ? extraNumbers : undefined,
+    specialNumbers: gameId === "vietlott_power_655" ? extraNumbers : undefined,
+    jackpot: jackpot ?? jackpotFromPrizeTable(prizeTable),
+    jackpot2,
+    prizeTable: prizeTable.length ? prizeTable : undefined,
+    sourceName: "Xo So Minh Ngoc",
+    sourceUrl,
+    updatedAt: new Date().toISOString()
+  } satisfies LotteryDraw;
+}
+
 async function enrichVietlottHistoryPage(gameId: VietlottGameId, draws: LotteryDraw[]) {
   const enriched: LotteryDraw[] = [];
   const batchSize = 5;
@@ -241,4 +341,15 @@ function normalizeVndPrize(value: string) {
 function parseVietnameseNumber(value: string) {
   const parsed = Number(value.replace(/\./g, "").replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeDrawNo(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits ? digits.slice(-5).padStart(5, "0") : null;
+}
+
+function readMinhNgocPrize(rawData: string | undefined, rawText: string) {
+  const digits = rawData?.replace(/\D/g, "") || rawText.replace(/\D/g, "");
+  if (!digits) return null;
+  return `${new Intl.NumberFormat("vi-VN").format(Number(digits))} VND`;
 }
