@@ -14,6 +14,8 @@ const vietlottGame: LotteryGame = {
   name: "Power 6/55",
   shortName: "Power 6/55",
   region: "VN",
+  regionLabel: "Việt Nam",
+  currency: "VND",
   iconHint: "655",
   drawSchedule: "test",
   numberFormat: "test",
@@ -26,6 +28,8 @@ const megaGame: LotteryGame = {
   name: "Mega Millions",
   shortName: "Mega Millions",
   region: "US",
+  regionLabel: "Hoa Kỳ",
+  currency: "USD",
   iconHint: "MM",
   drawSchedule: "test",
   numberFormat: "test",
@@ -38,6 +42,8 @@ const euroGame: LotteryGame = {
   name: "EuroMillions",
   shortName: "EuroMillions",
   region: "EU",
+  regionLabel: "Châu Âu",
+  currency: "EUR",
   iconHint: "EU",
   drawSchedule: "test",
   numberFormat: "test",
@@ -50,6 +56,8 @@ const euroJackpotGame: LotteryGame = {
   name: "EuroJackpot",
   shortName: "EuroJackpot",
   region: "EU",
+  regionLabel: "Châu Âu",
+  currency: "EUR",
   iconHint: "EJ",
   drawSchedule: "test",
   numberFormat: "test",
@@ -104,8 +112,8 @@ describe("normalize lottery data", () => {
 
     expect(draw.mainNumbers).toEqual([6, 10, 18, 44, 47]);
     expect(draw.bonusNumbers).toEqual([2, 10]);
-    expect(draw.jackpot).toBe("€100.00");
-    expect(draw.prizeTable?.[0].tier).toBe("5 so + 2 sao");
+    expect(draw.jackpot).toEqual({ amount: 100, currency: "EUR" });
+    expect(draw.prizeTable?.[0].tier).toBe("5 số + 2 sao");
   });
 
   it("normalizes EuroJackpot numbers, euro numbers, jackpot, and prize table", () => {
@@ -127,8 +135,12 @@ describe("normalize lottery data", () => {
     expect(draw.drawDate).toBe("2026-07-03");
     expect(draw.mainNumbers).toEqual([4, 9, 20, 25, 28]);
     expect(draw.bonusNumbers).toEqual([1, 3]);
-    expect(draw.jackpot).toBe("\u20ac17,267,413");
-    expect(draw.prizeTable?.[0]).toMatchObject({ tier: "5 so + 2 euro", winners: 0, prize: "\u20ac17,267,413" });
+    expect(draw.jackpot).toEqual({ amount: 17_267_412.52, currency: "EUR" });
+    expect(draw.prizeTable?.[0]).toMatchObject({
+      tier: "5 s\u1ed1 + 2 sao",
+      winners: 0,
+      prize: { amount: 17_267_412.52, currency: "EUR" }
+    });
   });
 
   it("computes descriptive number stats", () => {

@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
+import { parseMoneyText } from "../money";
 import { normalizeMegaMillions } from "../normalize";
 import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw } from "../types";
 
@@ -44,16 +45,16 @@ async function loadMegaMillionsDraws(socrataQuery: string) {
       if (enrichedDraws.some((draw) => draw.jackpot)) {
         return { draws: enrichedDraws, warnings };
       }
-      warnings.push("Mega Millions chua lay duoc jackpot tu Texas Lottery; dang hien thi bo so tu NY Open Data.");
+      warnings.push("Chưa lấy được giá trị jackpot Mega Millions từ Texas Lottery, đang hiển thị bộ số từ NY Open Data.");
       return { draws, warnings };
     }
   } catch {
-    warnings.push("NY Open Data dang chan Mega Millions; dang dung nguon Texas Lottery.");
+    warnings.push("NY Open Data đang chặn Mega Millions, đang dùng nguồn Texas Lottery.");
   }
 
   const texasDraws = await fetchTexasMegaMillions();
   if (!texasDraws.length) {
-    warnings.push("Texas Lottery tam thoi khong tra du lieu Mega Millions; vui long thu lai sau.");
+    warnings.push("Texas Lottery tạm thời không trả dữ liệu Mega Millions, vui lòng thử lại sau.");
   }
   return { draws: texasDraws, warnings };
 }
@@ -139,7 +140,7 @@ async function fetchTexasHtmlMegaMillions() {
     const mainNumbers = parseNumbers(cells[1]).sort((a, b) => a - b);
     const megaBall = Number(cells[2]);
     const multiplierText = cells[3];
-    const jackpot = cells[4] || null;
+    const jackpot = parseMoneyText(cells[4], "USD");
     const winnersText = cells[5];
 
     if (mainNumbers.length !== 5 || !Number.isFinite(megaBall)) return;
@@ -158,7 +159,7 @@ async function fetchTexasHtmlMegaMillions() {
         ? [
             {
               tier: "Jackpot",
-              match: "5 so + Mega Ball",
+              match: "5 số + Mega Ball",
               winners: winnersText.toLowerCase() === "roll" ? 0 : parseInteger(winnersText),
               prize: jackpot
             }

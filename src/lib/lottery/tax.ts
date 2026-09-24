@@ -1,5 +1,7 @@
-import type { LotteryDraw, LotteryGameId } from "./types";
+import { money, type Money } from "./money";
+import type { LotteryGameId } from "./types";
 
+/** Share of a prize the winner keeps after the local withholding rate. */
 const NET_RATES: Record<LotteryGameId, number> = {
   vietlott_lotto_535: 0.9,
   vietlott_power_655: 0.9,
@@ -9,102 +11,28 @@ const NET_RATES: Record<LotteryGameId, number> = {
   us_mega_millions: 0.3
 };
 
+const TAX_NOTES: Record<LotteryGameId, string> = {
+  vietlott_lotto_535: "Thuế thu nhập cá nhân 10% với phần thưởng vượt 10 triệu đồng.",
+  vietlott_power_655: "Thuế thu nhập cá nhân 10% với phần thưởng vượt 10 triệu đồng.",
+  vietlott_mega_645: "Thuế thu nhập cá nhân 10% với phần thưởng vượt 10 triệu đồng.",
+  eu_euromillions: "Ước tính sau thuế trung bình của các nước tham gia (khoảng 20%).",
+  eu_eurojackpot: "Ước tính sau thuế trung bình của các nước tham gia (khoảng 20%).",
+  us_mega_millions: "Ước tính sau thuế liên bang, thuế bang và chiết khấu nhận một lần (còn ~30%)."
+};
+
 export function getNetRate(gameId: LotteryGameId) {
   return NET_RATES[gameId];
 }
 
-export function formatNetPrize(value: string | number | null | undefined, draw: Pick<LotteryDraw, "gameId" | "region">) {
-  const parsed = parseMoney(value);
-  if (!parsed) return "Chua co";
-
-  const net = parsed.amount * getNetRate(draw.gameId);
-  return formatMoney(net, parsed.currency, draw.region);
+export function getNetRatePercent(gameId: LotteryGameId) {
+  return Math.round(getNetRate(gameId) * 100);
 }
 
-function parseMoney(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === "") return null;
-
-  if (typeof value === "number") {
-    return { amount: value, currency: "" };
-  }
-
-  const upper = value.toUpperCase();
-  const currency = upper.includes("VN") || upper.includes("Đ") ? "VND" : upper.includes("$") ? "USD" : upper.includes("€") ? "EUR" : "";
-  const multiplier = moneyScale(upper);
-  const numericText = value.replace(/[^\d.,-]/g, "");
-  if (!numericText) return null;
-
-  const amount = parseLocalizedNumber(numericText) * multiplier;
-  if (!Number.isFinite(amount)) return null;
-
-  return { amount, currency };
+export function getTaxNote(gameId: LotteryGameId) {
+  return TAX_NOTES[gameId];
 }
 
-function moneyScale(value: string) {
-  if (value.includes("BILLION") || value.includes("BIL.")) return 1_000_000_000;
-  if (value.includes("MILLION") || value.includes("MIL.")) return 1_000_000;
-  if (value.includes("THOUSAND") || value.includes("K")) return 1_000;
-  return 1;
-}
-
-function parseLocalizedNumber(value: string) {
-  const hasComma = value.includes(",");
-  const hasDot = value.includes(".");
-
-  if (hasComma && hasDot) {
-    const lastComma = value.lastIndexOf(",");
-    const lastDot = value.lastIndexOf(".");
-    const decimalSeparator = lastComma > lastDot ? "," : ".";
-    const thousandsSeparator = decimalSeparator === "," ? "." : ",";
-    return Number(value.replaceAll(thousandsSeparator, "").replace(decimalSeparator, "."));
-  }
-
-  if (hasDot) {
-    const parts = value.split(".");
-    if (parts.length > 1 && parts.at(-1)?.length === 3) {
-      return Number(value.replaceAll(".", ""));
-    }
-  }
-
-  if (hasComma) {
-    const parts = value.split(",");
-    if (parts.length > 1 && parts.at(-1)?.length === 3) {
-      return Number(value.replaceAll(",", ""));
-    }
-    return Number(value.replace(",", "."));
-  }
-
-  return Number(value);
-}
-
-function formatMoney(amount: number, currency: string, region: LotteryDraw["region"]) {
-  if (currency === "VND" || region === "VN") {
-    return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(amount)} VND`;
-  }
-
-  if (currency === "USD" || region === "US") {
-    return formatCompactUsd(amount);
-  }
-
-  if (currency === "EUR" || region === "EU") {
-    return new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amount);
-  }
-
-  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(amount);
-}
-
-function formatCompactUsd(amount: number) {
-  if (amount >= 1_000_000_000) {
-    return `$${trimTrailingZeros(amount / 1_000_000_000)} Billion`;
-  }
-
-  if (amount >= 1_000_000) {
-    return `$${trimTrailingZeros(amount / 1_000_000)} Million`;
-  }
-
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
-}
-
-function trimTrailingZeros(value: number) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
+export function toNetMoney(value: Money | null | undefined, gameId: LotteryGameId): Money | null {
+  if (!value) return null;
+  return money(value.amount * getNetRate(gameId), value.currency);
 }

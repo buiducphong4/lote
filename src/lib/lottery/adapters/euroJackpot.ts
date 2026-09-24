@@ -21,7 +21,7 @@ export const euroJackpotAdapter: LotteryAdapter = {
         const row = await fetchDraw(latestDate);
         return { data: normalizeEuroJackpot(row, game), warnings };
       } catch {
-        warnings.push("Khong tai duoc EuroJackpot o thoi diem nay.");
+        warnings.push("Không tải được EuroJackpot ở thời điểm này.");
         return { data: null, warnings };
       }
     });
@@ -32,12 +32,12 @@ export const euroJackpotAdapter: LotteryAdapter = {
       try {
         const dates = datesForQuery(query);
         if (dates.capped) {
-          warnings.push(`EuroJackpot chi tai toi da ${historyCap} ky moi nhat trong khoang da chon.`);
+          warnings.push(`EuroJackpot chỉ tải tối đa ${historyCap} kỳ mới nhất trong khoảng đã chọn.`);
         }
 
         const { rows, failedDates } = await fetchDraws(dates.values);
         if (failedDates.length) {
-          warnings.push(`EuroJackpot bi gioi han tam thoi o ${failedDates.length} ky; dang hien thi cac ky tai duoc.`);
+          warnings.push(`EuroJackpot bị giới hạn tạm thời ở ${failedDates.length} kỳ, đang hiển thị các kỳ tải được.`);
         }
 
         const draws = rows
@@ -46,7 +46,7 @@ export const euroJackpotAdapter: LotteryAdapter = {
 
         return { data: paginate(filterDraws(draws, query), query), warnings };
       } catch {
-        warnings.push("Khong tai duoc lich su EuroJackpot o thoi diem nay.");
+        warnings.push("Không tải được lịch sử EuroJackpot ở thời điểm này.");
         return { data: paginate([], query), warnings };
       }
     });

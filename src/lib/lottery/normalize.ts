@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { LotteryDraw, LotteryGame, LotteryGameId } from "./types";
+import { money, parseMoneyText, type Money } from "./money";
+import type { LotteryDraw, LotteryGame, LotteryGameId, PrizeTier } from "./types";
 
 const vietlottJsonlSchema = z.object({
   date: z.string(),
@@ -98,7 +99,7 @@ export function normalizeMegaMillions(raw: unknown, game: LotteryGame): LotteryD
     mainNumbers: numbers.slice(0, 5).sort((a, b) => a - b),
     bonusNumbers: megaBall ? [megaBall] : numbers[5] ? [numbers[5]] : undefined,
     specialNumbers: multiplier ? [multiplier] : undefined,
-    jackpot: jackpot ?? null,
+    jackpot: parseMoneyText(jackpot, "USD"),
     sourceName: "NY Open Data",
     sourceUrl: game.sourceUrl,
     updatedAt: new Date().toISOString()
@@ -121,17 +122,16 @@ export function normalizeEuroMillions(raw: unknown, game: LotteryGame): LotteryD
     const item = prize as Record<string, unknown>;
     const matchedNumbers = readNumber(item, ["matched_numbers", "matchedNumbers"]);
     const matchedStars = readNumber(item, ["matched_stars", "matchedStars"]);
-    const prizeAmount = readNumber(item, ["prize"]);
     return {
-      tier: `${matchedNumbers ?? "?"} so + ${matchedStars ?? "?"} sao`,
+      tier: formatEuroTier(matchedNumbers, matchedStars),
       winners: readNumber(item, ["winners"]),
-      prize: prizeAmount === null ? readString(item, ["prize"]) : formatEuro(prizeAmount),
+      prize: parseMoneyText(readString(item, ["prize"]), "EUR"),
       matchedNumbers,
       matchedStars
     };
   });
   const jackpot =
-    readString(row, ["jackpot", "top_prize"]) ??
+    parseMoneyText(readString(row, ["jackpot", "top_prize"]), "EUR") ??
     prizeRows.find((prize) => prize.matchedNumbers === 5 && prize.matchedStars === 2)?.prize ??
     null;
 
@@ -167,13 +167,13 @@ export function normalizeEuroJackpot(raw: unknown, game: LotteryGame): LotteryDr
     throw new Error("EuroJackpot response missing date, numbers, or euro numbers.");
   }
 
-  const prizeRows = EURO_JACKPOT_PRIZE_TIERS.map((tier) => {
+  const prizeTable: PrizeTier[] = EURO_JACKPOT_PRIZE_TIERS.map((tier) => {
     const rank = isRecord(odds[`rank${tier.rank}`]) ? odds[`rank${tier.rank}`] : {};
     const prizeCents = isRecord(rank) ? readNumber(rank, ["prize"]) : null;
     return {
-      tier: `${tier.main} so + ${tier.stars} euro`,
+      tier: formatEuroTier(tier.main, tier.stars),
       winners: isRecord(rank) ? readNumber(rank, ["winners"]) : null,
-      prize: prizeCents && prizeCents > 0 ? formatEuroCents(prizeCents) : null
+      prize: fromEuroCents(prizeCents)
     };
   });
 
@@ -186,8 +186,8 @@ export function normalizeEuroJackpot(raw: unknown, game: LotteryGame): LotteryDr
     drawNo: drawNo ?? undefined,
     mainNumbers: numbers.slice(0, 5).sort((a, b) => a - b),
     bonusNumbers: euroNumbers.slice(0, 2).sort((a, b) => a - b),
-    jackpot: rank1Prize && rank1Prize > 0 ? formatEuroCents(rank1Prize) : formatEuroMillionsValue(readString(row, ["jackpot", "marketingJackpot"])),
-    prizeTable: prizeRows,
+    jackpot: fromEuroCents(rank1Prize) ?? parseMoneyText(readString(row, ["jackpot", "marketingJackpot"]), "EUR"),
+    prizeTable,
     sourceName: "Lottoland EuroJackpot draw API",
     sourceUrl: `https://www.lottoland.com/api/drawings/euroJackpot/${drawDate.replaceAll("-", "")}`,
     updatedAt: new Date().toISOString()
@@ -218,6 +218,15 @@ export function toVietlottDataFile(gameId: LotteryGameId) {
   };
 
   return map[gameId as keyof typeof map];
+}
+
+function formatEuroTier(main: number | null, stars: number | null) {
+  return `${main ?? "?"} số + ${stars ?? "?"} sao`;
+}
+
+function fromEuroCents(value: number | null): Money | null {
+  if (value === null) return null;
+  return money(value / 100, "EUR");
 }
 
 function readString(row: Record<string, unknown>, keys: string[]) {
@@ -285,29 +294,6 @@ function parseNumbers(value: string | null) {
     .split(/[,\s-]+/)
     .map((part) => Number(part))
     .filter(Number.isFinite);
-}
-
-function formatEuro(value: number) {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: value >= 1000 ? 0 : 2
-  }).format(value);
-}
-
-function formatEuroCents(value: number) {
-  return formatEuro(value / 100);
-}
-
-function formatEuroMillionsValue(value: string | null) {
-  if (!value) return null;
-  const amount = Number(value.replace(/[^\d.,-]/g, "").replace(",", "."));
-  if (!Number.isFinite(amount)) return value;
-  return `${new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2
-  }).format(amount)} Million`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

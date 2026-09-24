@@ -1,6 +1,7 @@
 import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
+import { money, parseMoneyText } from "../money";
 import { normalizeEuroMillions } from "../normalize";
 import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw } from "../types";
 
@@ -144,12 +145,12 @@ async function fetchLottolandLatest(): Promise<LotteryDraw> {
     const rank = getRecord(odds[`rank${tier.rank}`]);
     const prizeCents = readNumber(rank, "prize");
     return {
-      tier: `${tier.main} so + ${tier.stars} sao`,
+      tier: `${tier.main} số + ${tier.stars} sao`,
       winners: readNumber(rank, "winners"),
-      prize: prizeCents && prizeCents > 0 ? formatEuro(prizeCents / 100) : null
+      prize: prizeCents ? money(prizeCents / 100, "EUR") : null
     };
   });
-  const jackpot = prizeTable[0]?.prize ?? formatEuroMillionsValue(readString(row, "marketingJackpot"));
+  const jackpot = prizeTable[0]?.prize ?? parseMoneyText(readString(row, "marketingJackpot"), "EUR");
   const drawDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
   return {
@@ -205,21 +206,6 @@ function readNumber(row: Record<string, unknown>, key: string) {
 function readNumberArray(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value.map((item) => Number(item)).filter(Number.isFinite);
-}
-
-function formatEuro(value: number) {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: value >= 1000 ? 0 : 2
-  }).format(value);
-}
-
-function formatEuroMillionsValue(value: string | null) {
-  if (!value) return null;
-  const amount = Number(value.replace(/[^\d.,-]/g, "").replace(",", "."));
-  if (!Number.isFinite(amount)) return value;
-  return `${formatEuro(amount)} Million`;
 }
 
 function filterDraws(draws: LotteryDraw[], query: HistoryQuery) {

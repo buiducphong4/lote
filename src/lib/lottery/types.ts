@@ -1,3 +1,5 @@
+import type { CurrencyCode, Money } from "./money";
+
 export type LotteryRegion = "VN" | "US" | "EU";
 
 export type LotteryGameId =
@@ -7,6 +9,13 @@ export type LotteryGameId =
   | "us_mega_millions"
   | "eu_euromillions"
   | "eu_eurojackpot";
+
+export type PrizeTier = {
+  tier: string;
+  match?: string;
+  winners?: number | null;
+  prize?: Money | null;
+};
 
 export type LotteryDraw = {
   id: string;
@@ -18,14 +27,9 @@ export type LotteryDraw = {
   mainNumbers: number[];
   bonusNumbers?: number[];
   specialNumbers?: number[];
-  jackpot?: string | number | null;
-  jackpot2?: string | number | null;
-  prizeTable?: {
-    tier: string;
-    match?: string;
-    winners?: number | null;
-    prize?: string | number | null;
-  }[];
+  jackpot?: Money | null;
+  jackpot2?: Money | null;
+  prizeTable?: PrizeTier[];
   sourceName: string;
   sourceUrl: string;
   updatedAt: string;
@@ -36,11 +40,14 @@ export type LotteryGame = {
   name: string;
   shortName: string;
   region: LotteryRegion;
+  regionLabel: string;
   iconHint: string;
   drawSchedule: string;
   numberFormat: string;
   sourceUrl: string;
   accent: string;
+  /** Currency the source publishes prizes in. */
+  currency: CurrencyCode;
 };
 
 export type AdapterResult<T> = {

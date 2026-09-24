@@ -5,7 +5,9 @@ const config: Config = {
   content: [
     "./src/pages/**/*.{ts,tsx}",
     "./src/components/**/*.{ts,tsx}",
-    "./src/app/**/*.{ts,tsx}"
+    "./src/app/**/*.{ts,tsx}",
+    // Game accent gradients live in src/lib/lottery/games.ts and must be scanned too.
+    "./src/lib/**/*.{ts,tsx}"
   ],
   theme: {
     extend: {

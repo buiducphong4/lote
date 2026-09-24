@@ -2,8 +2,9 @@
 import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
+import { money, parseMoneyText } from "../money";
 import { normalizeVietlottJsonl, toIsoDate, toVietlottDataFile } from "../normalize";
-import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw, LotteryGameId } from "../types";
+import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw, LotteryGameId, PrizeTier } from "../types";
 
 type VietlottGameId = Extract<LotteryGameId, "vietlott_lotto_535" | "vietlott_power_655" | "vietlott_mega_645">;
 
@@ -83,7 +84,7 @@ export function createVietlottAdapter(gameId: VietlottGameId): LotteryAdapter {
     async getHistory(query = {}) {
       return getCached(`history:${gameId}:${JSON.stringify(query)}`, TTL.history, async () => {
         const warnings = [
-          "Du lieu lich su Vietlott lay tu vietvudanh/vietlott-data; jackpot duoc bo sung tu trang chi tiet Vietlott neu tai duoc."
+          "Lịch sử Vietlott lấy từ vietvudanh/vietlott-data, jackpot được bổ sung từ trang chi tiết Vietlott khi tải được."
         ];
         const allDraws = await readVietlottJsonl(gameId);
         const paginated = paginate(filterDraws(allDraws, query), query);
@@ -125,11 +126,11 @@ function parseOfficialVietlott(html: string, gameId: VietlottGameId, sourceUrl?:
         tier: cells[0],
         match: cells[1],
         winners: parseVietnameseNumber(cells[2]),
-        prize: `${cells[3]} VND`
+        prize: parseMoneyText(cells[3], "VND")
       };
     })
     .get()
-    .filter(Boolean);
+    .filter(Boolean) as PrizeTier[];
 
   const jackpots = $(".gt_jackpot .so_tien h3")
     .map((_, element) => $(element).text().trim())
@@ -154,8 +155,8 @@ function parseOfficialVietlott(html: string, gameId: VietlottGameId, sourceUrl?:
     mainNumbers,
     bonusNumbers: gameId === "vietlott_lotto_535" ? extraNumbers : undefined,
     specialNumbers: gameId === "vietlott_power_655" ? extraNumbers : undefined,
-    jackpot: jackpots[0] ? `${jackpots[0]} VND` : normalizeVndPrize(headerJackpot) ?? jackpotFromPrizeTable(prizeTable),
-    jackpot2: jackpots[1] ? `${jackpots[1]} VND` : null,
+    jackpot: parseMoneyText(jackpots[0], "VND") ?? parseMoneyText(headerJackpot, "VND") ?? jackpotFromPrizeTable(prizeTable),
+    jackpot2: parseMoneyText(jackpots[1], "VND"),
     prizeTable: prizeTable.length ? prizeTable : undefined,
     sourceName: "Vietlott",
     sourceUrl: sourceUrl ?? game.sourceUrl,
@@ -224,11 +225,11 @@ async function readMinhNgocLatest(gameId: VietlottGameId) {
         tier: cells[0],
         match: cells[1],
         winners: parseVietnameseNumber(cells[2]),
-        prize: normalizeVndPrize(cells[3])
+        prize: parseMoneyText(cells[3], "VND")
       };
     })
     .get()
-    .filter(Boolean);
+    .filter(Boolean) as PrizeTier[];
   const mainNumbers = numbers.slice(0, mainCount);
   const extraNumbers = numbers.slice(mainCount);
   const jackpot = readMinhNgocPrize(root.find(".jackpot").first().attr("data"), root.find(".jackpot").first().text());
@@ -317,9 +318,7 @@ function paginate(draws: LotteryDraw[], query: HistoryQuery): HistoryResult {
   };
 }
 
-function jackpotFromPrizeTable(
-  prizeTable: NonNullable<LotteryDraw["prizeTable"]>
-): string | number | null {
+function jackpotFromPrizeTable(prizeTable: PrizeTier[]) {
   const jackpotRow = prizeTable.find((row) => /jackpot|doc dac|dac biet/i.test(removeVietnameseMarks(row.tier)));
   return jackpotRow?.prize ?? prizeTable[0]?.prize ?? null;
 }
@@ -331,11 +330,6 @@ function removeVietnameseMarks(value: string) {
     .replace(/\u0111/g, "d")
     .replace(/\u0110/g, "D")
     .toLowerCase();
-}
-
-function normalizeVndPrize(value: string) {
-  if (!value || !/\d/.test(value)) return null;
-  return value.toUpperCase().includes("VND") ? value : `${value} VND`;
 }
 
 function parseVietnameseNumber(value: string) {
@@ -351,5 +345,5 @@ function normalizeDrawNo(value: string) {
 function readMinhNgocPrize(rawData: string | undefined, rawText: string) {
   const digits = rawData?.replace(/\D/g, "") || rawText.replace(/\D/g, "");
   if (!digits) return null;
-  return `${new Intl.NumberFormat("vi-VN").format(Number(digits))} VND`;
+  return money(Number(digits), "VND");
 }
