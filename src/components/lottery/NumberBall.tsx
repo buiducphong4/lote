@@ -8,16 +8,10 @@ const LABELS: Record<BallVariant, string> = {
   special: "Số đặc biệt"
 };
 
-const VARIANT_STYLES: Record<BallVariant, string> = {
-  main: "border-slate-300 bg-white text-slate-900 dark:border-slate-400/70 dark:bg-slate-100 dark:text-slate-900",
-  bonus: "border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-300 dark:bg-amber-200 dark:text-amber-900",
-  special: "border-teal-400 bg-teal-100 text-teal-900 dark:border-teal-300 dark:bg-teal-200 dark:text-teal-900"
-};
-
 const SIZE_STYLES = {
-  sm: "h-7 w-7 border text-[11px]",
-  md: "h-10 w-10 border-2 text-sm sm:h-11 sm:w-11 sm:text-base",
-  lg: "h-12 w-12 border-2 text-lg sm:h-14 sm:w-14 sm:text-xl"
+  sm: "h-7 w-7 text-[11px]",
+  md: "h-10 w-10 text-sm sm:h-11 sm:w-11 sm:text-base",
+  lg: "h-12 w-12 text-lg sm:h-14 sm:w-14 sm:text-xl"
 } as const;
 
 export function NumberBall({
@@ -31,10 +25,11 @@ export function NumberBall({
 }) {
   return (
     <span
+      // Colour, border weight and radius come from the active skin via .ball-*.
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full font-bold tabular-nums shadow-sm",
-        SIZE_STYLES[size],
-        VARIANT_STYLES[variant]
+        "ball flex shrink-0 items-center justify-center font-bold tabular-nums",
+        `ball--${variant}`,
+        SIZE_STYLES[size]
       )}
       aria-label={`${LABELS[variant]} ${value}`}
     >

@@ -2,21 +2,21 @@
 
 import Link from "next/link";
 import { ArrowRight, CalendarDays } from "lucide-react";
-import { orderGames } from "@/lib/lottery/games";
 import { toNetMoney } from "@/lib/lottery/tax";
 import type { LotteryDraw, LotteryGame } from "@/lib/lottery/types";
 import { cn } from "@/lib/utils";
+import { GameBadge } from "./GameBadge";
 import { NumberSet } from "./NumberBall";
 import { PrizeAmount } from "./PrizeAmount";
 import { usePreferences } from "./PreferencesProvider";
 
 export function JackpotOverview({ games, draws }: { games: LotteryGame[]; draws: LotteryDraw[] }) {
-  const { gameOrder } = usePreferences();
+  const { arrangeGames } = usePreferences();
   const drawsByGame = new Map(draws.map((draw) => [draw.gameId, draw]));
 
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {orderGames(games, gameOrder).map((game) => (
+      {arrangeGames(games).map((game) => (
         <OverviewCard key={game.id} game={game} draw={drawsByGame.get(game.id)} />
       ))}
     </div>
@@ -27,15 +27,10 @@ function OverviewCard({ game, draw }: { game: LotteryGame; draw?: LotteryDraw })
   return (
     <Link
       href={`/games/${game.id}`}
-      className="group flex flex-col rounded-xl border bg-background/60 p-3 transition hover:border-foreground/25 hover:bg-background/90 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex flex-col rounded-xl border bg-background/60 p-3 transition hover:border-foreground/25 hover:bg-background/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex items-start gap-3">
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${game.accent} text-xs font-bold text-white`}
-          aria-hidden="true"
-        >
-          {game.iconHint}
-        </span>
+        <GameBadge game={game} size="lg" />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -89,7 +84,7 @@ function Metric({
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <PrizeAmount
         value={value}
-        className={cn("text-xs font-semibold leading-5 tabular-nums", emphasis && "text-teal-700 dark:text-teal-300")}
+        className={cn("text-xs font-semibold leading-5 tabular-nums", emphasis && "text-accent")}
       />
     </div>
   );

@@ -56,13 +56,37 @@ diễn ra ở tầng UI.
 - Chế độ `Gốc` giữ nguyên tiền tệ của từng giải và hiển thị thêm dòng quy đổi sang VND cho các giải nước ngoài.
 - Tỷ giá được cache 6 giờ.
 
+## Themes
+
+Bốn bộ giao diện khác nhau về màu, phông chữ, bo góc, đổ bóng và hình dạng quả cầu số. Chọn bằng
+biểu tượng bảng màu trên header; mỗi bộ đều có biến sáng và tối.
+
+| Bộ | Phong cách | Phông hiển thị | Bo góc |
+| --- | --- | --- | --- |
+| `aurora` | Kính mờ, chuyển sắc, teal (mặc định) | Inter | mềm |
+| `ban-tin` | Giấy in, phẳng hoàn toàn, mực đỏ | Playfair Display | gần vuông |
+| `neon` | Nền tối, magenta/cyan, phát sáng | JetBrains Mono (in hoa) | rất tròn |
+| `toi-gian` | Đơn sắc, không đổ bóng | Inter | vuông |
+
+Mỗi bộ định nghĩa cùng một tập token trong `src/styles/globals.css`, chọn qua `[data-skin]` trên `<html>`.
+Component không được hard-code bảng màu, bán kính bo góc hay phông chữ — Tailwind `borderRadius` và
+`fontFamily` cũng trỏ vào các token này. Danh sách bộ giao diện nằm ở `src/lib/theme.ts`.
+
+Một script nhỏ chạy trước khi trang vẽ lần đầu (`themeBootstrapScript`) để đọc lựa chọn đã lưu, tránh
+nháy giao diện mặc định mỗi lần tải lại.
+
 ## User Preferences
 
 Lưu trong `localStorage` và áp dụng ở client (`src/components/lottery/PreferencesProvider.tsx`):
 
 - `lote:currency` — đơn vị tiền tệ hiển thị (`native` | `VND` | `USD` | `EUR`).
-- `lote:gameOrder` — thứ tự các loại xổ số, chỉnh bằng kéo thả hoặc mũi tên ở mục "Sắp xếp thứ tự xổ số".
+- `lote:gameOrder` — thứ tự các loại xổ số, chỉnh bằng kéo thả hoặc mũi tên ở mục "Sắp xếp & ẩn xổ số".
   Thứ tự này áp dụng cho cả lưới tổng quan lẫn thanh tab chọn game.
+- `lote:hiddenGames` — các loại xổ số bị ẩn khỏi lưới tổng quan và thanh tab. Luôn phải còn ít nhất một
+  loại hiển thị. Loại đang bị ẩn vẫn mở được bằng URL trực tiếp (`/games/<id>`) và khi đó vẫn xuất hiện
+  trên thanh tab để biết mình đang xem gì.
+- `lote:skin` — bộ giao diện đang dùng.
+- `lote:theme` — chế độ sáng/tối; chưa đặt thì theo `prefers-color-scheme`.
 
 ## Cache Behavior
 

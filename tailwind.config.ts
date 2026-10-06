@@ -34,8 +34,22 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))"
         }
       },
+      // Driven by the active skin, so a flat skin squares off every corner at once.
+      borderRadius: {
+        none: "0px",
+        sm: "var(--radius-sm)",
+        DEFAULT: "var(--radius-md)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+        "2xl": "var(--radius-2xl)",
+        "3xl": "var(--radius-2xl)",
+        full: "9999px"
+      },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Inter", "system-ui", "sans-serif"]
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-body)", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains)", "ui-monospace", "monospace"]
       },
       boxShadow: {
         soft: "0 24px 80px rgba(15, 23, 42, 0.10)",

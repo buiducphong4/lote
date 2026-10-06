@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===========================================================================
+   Skin contract
+   ---------------------------------------------------------------------------
+   Every skin defines the same token set, so components never hard-code a
+   palette, radius, shadow or font. A skin is selected with [data-skin] on
+   <html> and each one has a light and a dark variant.
+   =========================================================================== */
+
+/* --- Aurora (default) · light ------------------------------------------- */
 :root {
   --background: 42 38% 96%;
   --foreground: 217 36% 12%;
@@ -9,15 +18,229 @@
   --card-foreground: 217 36% 12%;
   --muted: 218 20% 91%;
   --muted-foreground: 218 12% 38%;
-  --accent: 169 55% 40%;
+  --accent: 169 55% 32%;
   --accent-foreground: 0 0% 100%;
   --primary: 218 42% 18%;
   --primary-foreground: 0 0% 100%;
   --border: 218 18% 84%;
   --input: 218 18% 84%;
   --ring: 169 55% 40%;
+
+  --warn-bg: 38 92% 50% / 0.1;
+  --warn-border: 38 92% 50% / 0.3;
+  --warn-fg: 30 80% 30%;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-ball: 9999px;
+
+  --font-display: var(--font-inter);
+  --font-body: var(--font-inter);
+  --display-weight: 600;
+  --display-tracking: -0.015em;
+  --display-transform: none;
+
+  --body-bg:
+    radial-gradient(circle at 18% 12%, rgba(34, 197, 177, 0.16), transparent 26rem),
+    radial-gradient(circle at 84% 8%, rgba(197, 163, 78, 0.14), transparent 24rem),
+    linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted)));
+
+  --surface-bg: color-mix(in srgb, hsl(var(--card)) 72%, transparent);
+  --surface-border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
+  --surface-shadow: 0 24px 70px rgba(2, 6, 23, 0.08);
+  --surface-blur: blur(18px);
+
+  --ball-border-width: 2px;
+  --ball-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --ball-main-bg: #ffffff;
+  --ball-main-border: #cbd5e1;
+  --ball-main-fg: #0f172a;
+  --ball-bonus-bg: #fef3c7;
+  --ball-bonus-border: #fbbf24;
+  --ball-bonus-fg: #78350f;
+  --ball-special-bg: #ccfbf1;
+  --ball-special-border: #2dd4bf;
+  --ball-special-fg: #134e4a;
+
+  --badge-fg: #ffffff;
+  --selection: rgba(45, 212, 191, 0.28);
 }
 
+/* --- Bản tin · light ----------------------------------------------------- */
+[data-skin="ban-tin"] {
+  --background: 40 30% 94%;
+  --foreground: 25 18% 11%;
+  --card: 42 44% 97%;
+  --card-foreground: 25 18% 11%;
+  --muted: 38 24% 88%;
+  --muted-foreground: 28 10% 36%;
+  --accent: 8 64% 40%;
+  --accent-foreground: 40 40% 97%;
+  --primary: 25 18% 11%;
+  --primary-foreground: 42 44% 97%;
+  --border: 30 16% 72%;
+  --input: 30 16% 72%;
+  --ring: 8 64% 42%;
+
+  --warn-bg: 8 64% 40% / 0.08;
+  --warn-border: 8 64% 40% / 0.35;
+  --warn-fg: 8 64% 30%;
+
+  --radius-sm: 0.125rem;
+  --radius-md: 0.125rem;
+  --radius-lg: 0.1875rem;
+  --radius-xl: 0.25rem;
+  --radius-2xl: 0.25rem;
+  --radius-ball: 0.1875rem;
+
+  --font-display: var(--font-playfair);
+  --font-body: var(--font-be-vietnam);
+  --display-weight: 700;
+  --display-tracking: -0.01em;
+  --display-transform: none;
+
+  --body-bg: hsl(var(--background));
+
+  --surface-bg: hsl(var(--card));
+  --surface-border: 1px solid hsl(var(--border));
+  --surface-shadow: none;
+  --surface-blur: none;
+
+  --ball-border-width: 1px;
+  --ball-shadow: none;
+  --ball-main-bg: #fbf7ec;
+  --ball-main-border: #1c1917;
+  --ball-main-fg: #1c1917;
+  --ball-bonus-bg: #1c1917;
+  --ball-bonus-border: #1c1917;
+  --ball-bonus-fg: #fbf7ec;
+  --ball-special-bg: #b23a2b;
+  --ball-special-border: #b23a2b;
+  --ball-special-fg: #fbf7ec;
+
+  --badge-fg: hsl(var(--foreground));
+  --selection: rgba(178, 58, 43, 0.22);
+}
+
+/* --- Neon · light -------------------------------------------------------- */
+[data-skin="neon"] {
+  --background: 280 44% 97%;
+  --foreground: 265 52% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 265 52% 12%;
+  --muted: 278 40% 93%;
+  --muted-foreground: 270 22% 40%;
+  --accent: 315 82% 44%;
+  --accent-foreground: 0 0% 100%;
+  --primary: 265 60% 22%;
+  --primary-foreground: 0 0% 100%;
+  --border: 280 32% 85%;
+  --input: 280 32% 85%;
+  --ring: 315 88% 55%;
+
+  --warn-bg: 28 95% 55% / 0.14;
+  --warn-border: 28 95% 55% / 0.4;
+  --warn-fg: 22 85% 34%;
+
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.125rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 1.75rem;
+  --radius-ball: 9999px;
+
+  --font-display: var(--font-jetbrains);
+  --font-body: var(--font-be-vietnam);
+  --display-weight: 700;
+  --display-tracking: 0.02em;
+  --display-transform: uppercase;
+
+  --body-bg:
+    radial-gradient(circle at 12% 0%, rgba(248, 28, 229, 0.16), transparent 30rem),
+    radial-gradient(circle at 88% 10%, rgba(34, 211, 238, 0.16), transparent 28rem),
+    hsl(var(--background));
+
+  --surface-bg: color-mix(in srgb, hsl(var(--card)) 88%, transparent);
+  --surface-border: 1px solid color-mix(in srgb, hsl(var(--accent)) 24%, transparent);
+  --surface-shadow: 0 18px 50px rgba(248, 28, 229, 0.14);
+  --surface-blur: blur(10px);
+
+  --ball-border-width: 2px;
+  --ball-shadow: 0 0 0 3px rgba(248, 28, 229, 0.1);
+  --ball-main-bg: #ffffff;
+  --ball-main-border: #f81ce5;
+  --ball-main-fg: #3b0764;
+  --ball-bonus-bg: #06b6d4;
+  --ball-bonus-border: #0891b2;
+  --ball-bonus-fg: #042f2e;
+  --ball-special-bg: #f81ce5;
+  --ball-special-border: #c026d3;
+  --ball-special-fg: #ffffff;
+
+  --badge-fg: #ffffff;
+  --selection: rgba(248, 28, 229, 0.3);
+}
+
+/* --- Tối giản · light ---------------------------------------------------- */
+[data-skin="toi-gian"] {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 8%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 8%;
+  --muted: 0 0% 95%;
+  --muted-foreground: 0 0% 42%;
+  --accent: 0 0% 10%;
+  --accent-foreground: 0 0% 100%;
+  --primary: 0 0% 8%;
+  --primary-foreground: 0 0% 100%;
+  --border: 0 0% 85%;
+  --input: 0 0% 85%;
+  --ring: 0 0% 45%;
+
+  --warn-bg: 0 0% 0% / 0.05;
+  --warn-border: 0 0% 0% / 0.25;
+  --warn-fg: 0 0% 20%;
+
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-ball: 0;
+
+  --font-display: var(--font-inter);
+  --font-body: var(--font-inter);
+  --display-weight: 500;
+  --display-tracking: -0.03em;
+  --display-transform: none;
+
+  --body-bg: hsl(var(--background));
+
+  --surface-bg: transparent;
+  --surface-border: 1px solid hsl(var(--border));
+  --surface-shadow: none;
+  --surface-blur: none;
+
+  --ball-border-width: 1px;
+  --ball-shadow: none;
+  --ball-main-bg: #ffffff;
+  --ball-main-border: #111111;
+  --ball-main-fg: #111111;
+  --ball-bonus-bg: #111111;
+  --ball-bonus-border: #111111;
+  --ball-bonus-fg: #ffffff;
+  --ball-special-bg: #e5e5e5;
+  --ball-special-border: #111111;
+  --ball-special-fg: #111111;
+
+  --badge-fg: hsl(var(--foreground));
+  --selection: rgba(0, 0, 0, 0.14);
+}
+
+/* --- Aurora · dark ------------------------------------------------------- */
 .dark {
   --background: 219 38% 7%;
   --foreground: 210 30% 96%;
@@ -25,14 +248,150 @@
   --card-foreground: 210 30% 96%;
   --muted: 220 20% 18%;
   --muted-foreground: 216 15% 70%;
-  --accent: 172 52% 48%;
+  --accent: 172 52% 56%;
   --accent-foreground: 219 38% 7%;
   --primary: 210 30% 96%;
   --primary-foreground: 219 38% 7%;
   --border: 220 19% 22%;
   --input: 220 19% 22%;
   --ring: 172 52% 48%;
+
+  --warn-fg: 45 95% 76%;
+
+  --body-bg:
+    radial-gradient(circle at 18% 12%, rgba(45, 212, 191, 0.12), transparent 28rem),
+    radial-gradient(circle at 86% 12%, rgba(251, 191, 36, 0.08), transparent 24rem),
+    linear-gradient(135deg, #070b14 0%, #111827 48%, #171717 100%);
+
+  --surface-bg: rgba(15, 23, 42, 0.62);
+  --surface-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+
+  --ball-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ball-main-bg: #e2e8f0;
+  --ball-main-border: #94a3b8;
+  --ball-main-fg: #0f172a;
 }
+
+/* --- Bản tin · dark ------------------------------------------------------ */
+.dark[data-skin="ban-tin"] {
+  --background: 28 12% 9%;
+  --foreground: 40 26% 90%;
+  --card: 28 12% 12%;
+  --card-foreground: 40 26% 90%;
+  --muted: 28 10% 18%;
+  --muted-foreground: 36 12% 64%;
+  --accent: 12 72% 62%;
+  --accent-foreground: 28 12% 9%;
+  --primary: 40 26% 90%;
+  --primary-foreground: 28 12% 9%;
+  --border: 30 10% 26%;
+  --input: 30 10% 26%;
+  --ring: 12 72% 58%;
+
+  --warn-bg: 12 72% 62% / 0.12;
+  --warn-border: 12 72% 62% / 0.4;
+  --warn-fg: 20 80% 76%;
+
+  --body-bg: hsl(var(--background));
+
+  --ball-main-bg: #211d19;
+  --ball-main-border: #e7dcc6;
+  --ball-main-fg: #e7dcc6;
+  --ball-bonus-bg: #e7dcc6;
+  --ball-bonus-border: #e7dcc6;
+  --ball-bonus-fg: #211d19;
+  --ball-special-bg: #d9644f;
+  --ball-special-border: #d9644f;
+  --ball-special-fg: #1c1917;
+
+  --badge-fg: hsl(var(--foreground));
+  --selection: rgba(217, 100, 79, 0.3);
+}
+
+/* --- Neon · dark (the skin's natural home) ------------------------------- */
+.dark[data-skin="neon"] {
+  --background: 265 48% 5%;
+  --foreground: 288 26% 96%;
+  --card: 268 42% 10%;
+  --card-foreground: 288 26% 96%;
+  --muted: 268 36% 17%;
+  --muted-foreground: 285 22% 74%;
+  --accent: 315 95% 68%;
+  --accent-foreground: 265 48% 5%;
+  --primary: 288 26% 96%;
+  --primary-foreground: 265 48% 5%;
+  --border: 288 44% 26%;
+  --input: 288 44% 26%;
+  --ring: 190 95% 55%;
+
+  --warn-bg: 32 95% 60% / 0.14;
+  --warn-border: 32 95% 60% / 0.45;
+  --warn-fg: 38 100% 72%;
+
+  --body-bg:
+    radial-gradient(circle at 10% 0%, rgba(248, 28, 229, 0.26), transparent 32rem),
+    radial-gradient(circle at 92% 8%, rgba(34, 211, 238, 0.22), transparent 30rem),
+    radial-gradient(circle at 50% 100%, rgba(124, 58, 237, 0.2), transparent 34rem),
+    #07030f;
+
+  --surface-bg: rgba(22, 8, 44, 0.74);
+  --surface-border: 1px solid rgba(248, 28, 229, 0.3);
+  --surface-shadow: 0 0 0 1px rgba(34, 211, 238, 0.08), 0 24px 60px rgba(248, 28, 229, 0.22);
+  --surface-blur: blur(14px);
+
+  --ball-shadow: 0 0 14px rgba(248, 28, 229, 0.55);
+  --ball-main-bg: #190a2e;
+  --ball-main-border: #f81ce5;
+  --ball-main-fg: #fdf4ff;
+  --ball-bonus-bg: #0b3f49;
+  --ball-bonus-border: #22d3ee;
+  --ball-bonus-fg: #a5f3fc;
+  --ball-special-bg: #f81ce5;
+  --ball-special-border: #fbcfe8;
+  --ball-special-fg: #2a0320;
+
+  --selection: rgba(34, 211, 238, 0.35);
+}
+
+/* --- Tối giản · dark ----------------------------------------------------- */
+.dark[data-skin="toi-gian"] {
+  --background: 0 0% 6%;
+  --foreground: 0 0% 95%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 95%;
+  --muted: 0 0% 14%;
+  --muted-foreground: 0 0% 62%;
+  --accent: 0 0% 94%;
+  --accent-foreground: 0 0% 6%;
+  --primary: 0 0% 95%;
+  --primary-foreground: 0 0% 6%;
+  --border: 0 0% 24%;
+  --input: 0 0% 24%;
+  --ring: 0 0% 62%;
+
+  --warn-bg: 0 0% 100% / 0.07;
+  --warn-border: 0 0% 100% / 0.3;
+  --warn-fg: 0 0% 82%;
+
+  --body-bg: hsl(var(--background));
+
+  --ball-main-bg: #0f0f0f;
+  --ball-main-border: #f2f2f2;
+  --ball-main-fg: #f2f2f2;
+  --ball-bonus-bg: #f2f2f2;
+  --ball-bonus-border: #f2f2f2;
+  --ball-bonus-fg: #0f0f0f;
+  --ball-special-bg: #2e2e2e;
+  --ball-special-border: #f2f2f2;
+  --ball-special-fg: #f2f2f2;
+
+  --badge-fg: hsl(var(--foreground));
+  --selection: rgba(255, 255, 255, 0.2);
+}
+
+/* ===========================================================================
+   Structure built on the tokens above
+   =========================================================================== */
 
 * {
   border-color: hsl(var(--border));
@@ -42,31 +401,84 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   color: hsl(var(--foreground));
-  background:
-    radial-gradient(circle at 18% 12%, rgba(34, 197, 177, 0.16), transparent 26rem),
-    radial-gradient(circle at 84% 8%, rgba(197, 163, 78, 0.14), transparent 24rem),
-    linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted)));
+  background: var(--body-bg);
+  background-attachment: fixed;
+  font-family: var(--font-body), system-ui, sans-serif;
 }
 
-.dark body {
-  background:
-    radial-gradient(circle at 18% 12%, rgba(45, 212, 191, 0.12), transparent 28rem),
-    radial-gradient(circle at 86% 12%, rgba(251, 191, 36, 0.08), transparent 24rem),
-    linear-gradient(135deg, #070b14 0%, #111827 48%, #171717 100%);
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  text-transform: var(--display-transform);
 }
 
 ::selection {
-  background: rgba(45, 212, 191, 0.28);
+  background: var(--selection);
 }
 
 .glass {
-  background: color-mix(in srgb, hsl(var(--card)) 72%, transparent);
-  border: 1px solid color-mix(in srgb, hsl(var(--border)) 78%, transparent);
-  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.08);
-  backdrop-filter: blur(18px);
+  background: var(--surface-bg);
+  border: var(--surface-border);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: var(--surface-blur);
 }
 
-.dark .glass {
-  background: rgba(15, 23, 42, 0.62);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+/* Prize balls: skins control colour, border weight, radius and glow. */
+.ball {
+  border-style: solid;
+  border-width: var(--ball-border-width);
+  border-radius: var(--radius-ball);
+  box-shadow: var(--ball-shadow);
+}
+
+.ball--main {
+  background: var(--ball-main-bg);
+  border-color: var(--ball-main-border);
+  color: var(--ball-main-fg);
+}
+
+.ball--bonus {
+  background: var(--ball-bonus-bg);
+  border-color: var(--ball-bonus-border);
+  color: var(--ball-bonus-fg);
+}
+
+.ball--special {
+  background: var(--ball-special-bg);
+  border-color: var(--ball-special-border);
+  color: var(--ball-special-fg);
+}
+
+/*
+ * Game badges carry a per-game gradient from Tailwind utility classes. Flat
+ * skins drop that gradient here, so no call site has to know the active skin.
+ */
+.game-badge {
+  color: var(--badge-fg);
+  background-color: hsl(var(--muted));
+}
+
+[data-skin="ban-tin"] .game-badge,
+[data-skin="toi-gian"] .game-badge {
+  background-image: none;
+  border: 1px solid hsl(var(--border));
+}
+
+.accent-panel {
+  background: color-mix(in srgb, hsl(var(--accent)) 12%, transparent);
+  border: 1px solid color-mix(in srgb, hsl(var(--accent)) 28%, transparent);
+}
+
+.warn-panel {
+  background: hsl(var(--warn-bg));
+  border: 1px solid hsl(var(--warn-border));
+  color: hsl(var(--warn-fg));
+}
+
+.warn-text {
+  color: hsl(var(--warn-fg));
 }

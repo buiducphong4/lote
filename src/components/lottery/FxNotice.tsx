@@ -17,7 +17,7 @@ export function FxNotice({ className }: { className?: string }) {
     <p
       className={cn(
         "flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground",
-        rates.stale && "text-amber-700 dark:text-amber-300",
+        rates.stale && "warn-text",
         className
       )}
     >

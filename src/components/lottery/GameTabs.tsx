@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { orderGames } from "@/lib/lottery/games";
 import type { LotteryGame, LotteryGameId } from "@/lib/lottery/types";
 import { cn } from "@/lib/utils";
+import { GameBadge } from "./GameBadge";
 import { usePreferences } from "./PreferencesProvider";
 
 export function GameTabs({
@@ -17,7 +17,7 @@ export function GameTabs({
   basePath: string;
   extraParams?: Record<string, string | undefined>;
 }) {
-  const { gameOrder } = usePreferences();
+  const { arrangeGames } = usePreferences();
 
   return (
     <div
@@ -25,7 +25,7 @@ export function GameTabs({
       role="tablist"
       aria-label="Chọn sản phẩm xổ số"
     >
-      {orderGames(games, gameOrder).map((game) => {
+      {arrangeGames(games, activeGameId).map((game) => {
         const active = activeGameId === game.id;
 
         return (
@@ -41,15 +41,7 @@ export function GameTabs({
                 : "border-border bg-background/50 text-muted-foreground hover:border-foreground/25 hover:text-foreground"
             )}
           >
-            <span
-              className={cn(
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded bg-gradient-to-br text-[9px] font-bold text-white",
-                game.accent
-              )}
-              aria-hidden="true"
-            >
-              {game.iconHint}
-            </span>
+            <GameBadge game={game} size="sm" />
             <span className="whitespace-nowrap">{game.shortName}</span>
           </Link>
         );

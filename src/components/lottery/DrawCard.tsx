@@ -52,7 +52,7 @@ export function DrawCard({ draw, featured = false }: { draw: LotteryDraw; featur
           </div>
         ) : null}
 
-        <div className="rounded-xl border border-teal-500/25 bg-teal-500/10 p-3">
+        <div className="accent-panel rounded-xl p-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm text-muted-foreground">
               Ước tính thực nhận (còn {getNetRatePercent(draw.gameId)}%)

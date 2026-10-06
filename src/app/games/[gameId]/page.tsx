@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { DrawCard } from "@/components/lottery/DrawCard";
 import { FxNotice } from "@/components/lottery/FxNotice";
+import { GameBadge } from "@/components/lottery/GameBadge";
 import { HistoryTable } from "@/components/lottery/HistoryTable";
 import { RefreshButton } from "@/components/lottery/RefreshButton";
 import { Warnings } from "@/components/lottery/Warnings";
@@ -32,12 +33,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ gam
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <span
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${game.accent} text-sm font-bold text-white`}
-            aria-hidden="true"
-          >
-            {game.iconHint}
-          </span>
+          <GameBadge game={game} size="xl" />
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{game.regionLabel}</p>
             <h1 className="text-2xl font-semibold sm:text-4xl">{game.name}</h1>

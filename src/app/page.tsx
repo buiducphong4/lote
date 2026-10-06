@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ArrowRight, History, ShieldCheck } from "lucide-react";
 import { FxNotice } from "@/components/lottery/FxNotice";
-import { GameOrderEditor } from "@/components/lottery/GameOrderEditor";
+import { GameManager } from "@/components/lottery/GameManager";
 import { JackpotOverview } from "@/components/lottery/JackpotOverview";
 import { RefreshButton } from "@/components/lottery/RefreshButton";
+import { VisibleGameCount } from "@/components/lottery/VisibleGameCount";
 import { Warnings } from "@/components/lottery/Warnings";
 import { Button } from "@/components/ui/button";
 import { getGames, getLatest } from "@/lib/lottery/service";
@@ -20,12 +21,12 @@ export default async function HomePage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="mb-2 inline-flex items-center gap-2 rounded-lg border bg-background/55 px-2.5 py-1.5 text-xs text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-teal-500" aria-hidden="true" />
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
               Dashboard tra cứu, không phải ứng dụng cá cược
             </p>
             <h1 className="text-2xl font-semibold leading-tight sm:text-4xl">Jackpot hiện tại</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Kết quả mới nhất, jackpot và ước tính thực nhận của {games.length} sản phẩm xổ số.
+              Kết quả mới nhất, jackpot và ước tính thực nhận của <VisibleGameCount games={games} />.
             </p>
             <FxNotice className="mt-2" />
           </div>
@@ -42,7 +43,7 @@ export default async function HomePage() {
         </div>
 
         <Warnings warnings={latest.warnings} />
-        <GameOrderEditor games={games} />
+        <GameManager games={games} />
         <JackpotOverview games={games} draws={latest.draws} />
       </section>
 

@@ -6,7 +6,7 @@ export function Warnings({ warnings }: { warnings: string[] }) {
   return (
     <div
       role="status"
-      className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100"
+      className="warn-panel rounded-xl p-3 text-sm"
     >
       <div className="flex gap-2">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
