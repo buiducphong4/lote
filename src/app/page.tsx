@@ -44,7 +44,7 @@ export default async function HomePage() {
 
         <Warnings warnings={latest.warnings} />
         <GameManager games={games} />
-        <JackpotOverview games={games} draws={latest.draws} />
+        <JackpotOverview games={games} draws={latest.draws} nextDraws={latest.nextDraws} />
       </section>
 
       <section className="glass rounded-xl p-3 text-sm text-muted-foreground sm:p-4">

@@ -57,7 +57,7 @@ export default async function GameDetailPage({ params }: { params: Promise<{ gam
       <Warnings warnings={[...latest.warnings, ...history.warnings]} />
 
       {draw ? (
-        <DrawCard draw={draw} featured />
+        <DrawCard draw={draw} next={latest.nextDraws[0]} featured />
       ) : (
         <EmptyState title="Chưa có kết quả" description="Nguồn dữ liệu chưa trả về kỳ quay mới nhất." />
       )}

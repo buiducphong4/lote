@@ -39,7 +39,7 @@ export default async function LatestPage({
       <Warnings warnings={latest.warnings} />
 
       {draw ? (
-        <DrawCard draw={draw} featured />
+        <DrawCard draw={draw} next={latest.nextDraws[0]} featured />
       ) : (
         <EmptyState title="Chưa có kết quả" description="Nguồn dữ liệu chưa trả về kết quả hợp lệ cho sản phẩm này." />
       )}

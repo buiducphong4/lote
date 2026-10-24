@@ -32,6 +32,7 @@ npm run build
 - Mega Millions fallback: official Texas Lottery CSV winning numbers.
 - EuroMillions: `https://euromillions.api.pedromealha.dev/v1/draws`, with fallback to `/draws`.
 - EuroJackpot: `https://www.lottoland.com/api/drawings/euroJackpot/YYYYMMDD`.
+- Jackpot kỳ tới (mức nhà điều hành công bố): Lottoland (`next`) cho EuroMillions và EuroJackpot, trang Mega Millions của Texas Lottery cho Mega Millions. Vietlott chưa có nguồn công khai nên không hiển thị mục này.
 - Tỷ giá: `https://open.er-api.com/v6/latest/USD` (chính), fallback `https://api.frankfurter.dev/v1/latest?base=USD` (ECB, không có VND), cuối cùng là bảng tỷ giá ngoại tuyến trong `src/lib/lottery/fx.ts`.
 
 ## Architecture
@@ -43,7 +44,19 @@ All external data access is routed through Next.js backend code in `src/lib/lott
 - `GET /api/lottery/history?gameId=...&from=YYYY-MM-DD&to=YYYY-MM-DD&page=1&pageSize=30&currency=VND|USD|EUR`
 - `GET /api/lottery/fx`
 
+- `POST /api/lottery/refresh` — xoá cache của phần "kỳ mới nhất" để nút **Làm mới** thực sự gọi lại nguồn (có cooldown 20 giây, không đụng tới cache lịch sử).
+
 Each lottery provider has an adapter returning the normalized `LotteryDraw` schema in `src/lib/lottery/types.ts`.
+Adapter nào có nguồn công bố jackpot kỳ chưa quay thì cài thêm `getNext()`, trả về `NextDraw`.
+
+## Jackpot kỳ này và jackpot kỳ tới
+
+Đây là hai con số khác nhau và trước đây rất dễ nhầm:
+
+- **Jackpot kỳ này** — giá trị của kỳ vừa quay. Không ai trúng thì đó là số tiền cộng dồn, lấy từ bảng cơ cấu giải thưởng của chính kỳ đó.
+- **Jackpot kỳ tới** — mức nhà điều hành công bố cho kỳ chưa quay. Đây mới là con số các trang xổ số đưa lên trang chủ kèm đồng hồ đếm ngược, và là một ước tính.
+
+Ví dụ EuroMillions ngày 23-10-2026: kỳ vừa quay cộng dồn €70,2M, còn mức công bố cho kỳ 27-10 là €79M.
 
 ## Money and Currency
 
@@ -92,8 +105,13 @@ Lưu trong `localStorage` và áp dụng ở client (`src/components/lottery/Pre
 
 Server-side in-memory cache is implemented in `src/lib/lottery/cache.ts`.
 
-- Latest results TTL: 10 minutes.
-- Historical backfill TTL: 24 hours.
+- `TTL.latest` (60 giây) — memo hoá một lượt render "kỳ mới nhất".
+- `TTL.upstream` (10 phút) — mức cũ tối đa mà một payload từ nguồn được phép có khi phục vụ "kỳ mới nhất". Nhiều nguồn trả 429 nếu poll dày hơn.
+- `TTL.history` (24 giờ) — dữ liệu lịch sử.
+
+Một payload có thể vừa phục vụ lịch sử vừa phục vụ kỳ mới nhất. Khi đó lượt đọc "kỳ mới nhất" truyền thêm
+`maxAgeMs` vào `getCached` để không bị trả về bản đã nằm trong cache cả ngày — nếu thiếu bước này, một kỳ quay
+mới có thể không xuất hiện suốt 24 giờ dù nguồn đã có dữ liệu.
 
 The cache is per server process. In serverless deployments it may be reset between cold starts.
 
@@ -101,7 +119,8 @@ The cache is per server process. In serverless deployments it may be reset betwe
 
 - Vietlott does not expose an assumed public official JSON API here. The primary adapter parses the official HTML page. If the page structure changes, the UI shows: `Nguồn Vietlott thay đổi cấu trúc, cần cập nhật parser.`
 - Mega Millions first tries the public Socrata endpoint. Some networks may receive a 403 without a Socrata app token. In that case the app falls back to the official Texas Lottery CSV, which includes winning numbers but not jackpot values.
-- EuroMillions uses a community API, not an official lottery operator API.
+- EuroMillions uses a community API, not an official lottery operator API. Endpoint tải toàn bộ lịch sử nặng ~2MB và hay trả 429; khi đó adapter lùi về truy vấn theo năm và báo trong `Warnings`.
+- Jackpot kỳ tới là ước tính do nhà điều hành công bố, không phải số quyết toán. Vietlott không có mục này.
 - EuroJackpot uses the public Lottoland draw endpoint by draw date.
 - Statistics are descriptive only. They are not predictions and should not be used as betting guidance.
 - Số tiền quy đổi chỉ mang tính tham khảo: tỷ giá là tỷ giá thị trường, không phải tỷ giá mua/bán của ngân hàng.

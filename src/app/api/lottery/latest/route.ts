@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { convertDraw } from "@/lib/lottery/convertDraw";
-import { isCurrencyCode } from "@/lib/lottery/money";
+import { convertMoney, isCurrencyCode } from "@/lib/lottery/money";
 import { getFxRates, getLatest, parseGameId } from "@/lib/lottery/service";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +14,13 @@ export async function GET(request: NextRequest) {
   const [result, fx] = await Promise.all([getLatest(gameId), getFxRates()]);
   const draws = currency ? result.draws.map((draw) => convertDraw(draw, currency, fx.rates)) : result.draws;
 
+  const nextDraws = currency
+    ? result.nextDraws.map((next) => ({ ...next, jackpot: next.jackpot ? convertMoney(next.jackpot, currency, fx.rates) : null }))
+    : result.nextDraws;
+
   return NextResponse.json({
     data: gameId ? draws[0] ?? null : draws,
+    next: gameId ? nextDraws[0] ?? null : nextDraws,
     warnings: result.warnings,
     fx: currency ? fx : undefined
   });

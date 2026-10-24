@@ -3,12 +3,14 @@ import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
 import { money, parseMoneyText } from "../money";
 import { normalizeEuroMillions } from "../normalize";
+import { fetchLottolandNext } from "./lottoland";
 import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw } from "../types";
 
 const game = getGame("eu_euromillions");
 const preferredUrl = "https://euromillions.api.pedromealha.dev/v1/draws";
 const fallbackUrl = "https://euromillions.api.pedromealha.dev/draws";
 const lottolandUrl = "https://www.lottoland.com/api/drawings/euroMillions";
+const lottolandReferer = "https://www.lottoland.com/en/euromillions/results-winning-numbers";
 
 const EURO_MILLIONS_PRIZE_TIERS = [
   { rank: 1, main: 5, stars: 2 },
@@ -34,7 +36,7 @@ export const euroMillionsAdapter: LotteryAdapter = {
     return getCached("latest:eu_euromillions", TTL.latest, async () => {
       const warnings: string[] = [];
       try {
-        const rows = await fetchDraws();
+        const rows = await fetchLatestRows();
         const draws = rows.map((row) => normalizeEuroMillions(row, game));
         return { data: draws.sort((a, b) => b.drawDate.localeCompare(a.drawDate))[0] ?? null, warnings };
       } catch {
@@ -46,11 +48,23 @@ export const euroMillionsAdapter: LotteryAdapter = {
       }
     });
   },
+  async getNext() {
+    try {
+      return { data: await fetchLottolandNext("eu_euromillions", lottolandUrl, lottolandReferer), warnings: [] };
+    } catch {
+      return { data: null, warnings: [] };
+    }
+  },
   async getHistory(query = {}) {
     return getCached(`history:eu_euromillions:${JSON.stringify(query)}`, TTL.history, async () => {
       const warnings: string[] = [];
       try {
-        const { rows, failedYears } = await fetchHistoryRows(query);
+        const { rows, failedYears, limitedToYears } = await fetchHistoryRows(query);
+        if (limitedToYears.length) {
+          warnings.push(
+            `Nguồn EuroMillions đang giới hạn truy cập toàn bộ lịch sử; chỉ hiển thị năm ${limitedToYears.join(", ")}.`
+          );
+        }
         if (failedYears.length) {
           warnings.push(`EuroMillions bị giới hạn tạm thời ở năm ${failedYears.join(", ")}; đang hiển thị các năm tải được.`);
         }
@@ -68,14 +82,11 @@ export const euroMillionsAdapter: LotteryAdapter = {
 
 async function fetchHistoryRows(query: HistoryQuery) {
   try {
-    return { rows: await fetchDraws(), failedYears: [] as number[] };
+    return { rows: await fetchDraws(), failedYears: [] as number[], limitedToYears: [] as number[] };
   } catch {
+    // The all-draw endpoint answers 429 under load. Year-scoped requests are far smaller and
+    // usually still go through, so fall back to those rather than showing an empty table.
     const years = yearsForQuery(query);
-
-    if (!years.length) {
-      throw new Error("EuroMillions all-draw endpoint failed.");
-    }
-
     const rows: unknown[] = [];
     const failedYears: number[] = [];
 
@@ -88,15 +99,15 @@ async function fetchHistoryRows(query: HistoryQuery) {
       }
     }
 
-    return { rows, failedYears };
+    const loadedYears = years.filter((year) => !failedYears.includes(year));
+    return { rows, failedYears, limitedToYears: query.from || query.to ? [] : loadedYears };
   }
 }
 
 function yearsForQuery(query: HistoryQuery) {
-  if (!query.from && !query.to) return [];
-
   const currentYear = new Date().getFullYear();
-  const fromYear = query.from ? Number(query.from.slice(0, 4)) : 2004;
+  // Without an explicit range, the recent seasons are what a reader is paging through.
+  const fromYear = query.from ? Number(query.from.slice(0, 4)) : currentYear - 1;
   const toYear = query.to ? Number(query.to.slice(0, 4)) : currentYear;
 
   if (!Number.isFinite(fromYear) || !Number.isFinite(toYear)) return [];
@@ -106,25 +117,39 @@ function yearsForQuery(query: HistoryQuery) {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
-async function fetchDraws(year?: string) {
-  return getCached(`raw:euromillions:${year ?? "all"}`, TTL.history, async () => {
-    const query = year ? `?year=${encodeURIComponent(year)}` : "";
+/**
+ * The latest draw must not be served from the 24h history cache, or a new result stays invisible
+ * for a day. Scope the refresh to the current year as well: that payload is ~90KB against ~2MB for
+ * every draw since 2004, and the all-draws endpoint answers 429 when polled.
+ */
+async function fetchLatestRows() {
+  const year = String(new Date().getUTCFullYear());
+  const rows = await fetchDraws(year, TTL.upstream).catch(() => [] as unknown[]);
+  return rows.length ? rows : fetchDraws(undefined, TTL.upstream);
+}
 
-    try {
-      const response = await fetchWithTimeout(`${preferredUrl}${query}`);
-      return normalizePayload(await response.json());
-    } catch {
-      const response = await fetchWithTimeout(`${fallbackUrl}${query}`);
-      return normalizePayload(await response.json());
-    }
-  });
+async function fetchDraws(year?: string, maxAgeMs?: number) {
+  return getCached(
+    `raw:euromillions:${year ?? "all"}`,
+    TTL.history,
+    async () => {
+      const query = year ? `?year=${encodeURIComponent(year)}` : "";
+
+      try {
+        const response = await fetchWithTimeout(`${preferredUrl}${query}`);
+        return normalizePayload(await response.json());
+      } catch {
+        const response = await fetchWithTimeout(`${fallbackUrl}${query}`);
+        return normalizePayload(await response.json());
+      }
+    },
+    { maxAgeMs }
+  );
 }
 
 async function fetchLottolandLatest(): Promise<LotteryDraw> {
   const response = await fetchWithTimeout(lottolandUrl, {
-    headers: {
-      Referer: "https://www.lottoland.com/en/euromillions/results-winning-numbers"
-    }
+    headers: { Referer: lottolandReferer }
   });
   const payload = (await response.json()) as Record<string, unknown>;
   const row = getRecord(payload.last);

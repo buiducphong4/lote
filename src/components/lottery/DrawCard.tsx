@@ -1,15 +1,24 @@
 "use client";
 
 import { CalendarDays, Coins, Hash, Info } from "lucide-react";
-import type { LotteryDraw } from "@/lib/lottery/types";
+import type { LotteryDraw, NextDraw } from "@/lib/lottery/types";
 import { getNetRatePercent, getTaxNote, toNetMoney } from "@/lib/lottery/tax";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { NextDrawPanel } from "./NextDrawPanel";
 import { NumberSet } from "./NumberBall";
 import { PrizeAmount, PrizeText } from "./PrizeAmount";
 import { SourceBadge } from "./SourceBadge";
 import { usePreferences } from "./PreferencesProvider";
 
-export function DrawCard({ draw, featured = false }: { draw: LotteryDraw; featured?: boolean }) {
+export function DrawCard({
+  draw,
+  next,
+  featured = false
+}: {
+  draw: LotteryDraw;
+  next?: NextDraw;
+  featured?: boolean;
+}) {
   const { format } = usePreferences();
   const netJackpot = toNetMoney(draw.jackpot, draw.gameId);
   const prizeRows = draw.prizeTable?.slice(0, featured ? 12 : 5) ?? [];
@@ -29,6 +38,8 @@ export function DrawCard({ draw, featured = false }: { draw: LotteryDraw; featur
       </CardHeader>
 
       <CardContent className="space-y-4 p-4 pt-0 sm:p-5 sm:pt-0">
+        {next ? <NextDrawPanel next={next} /> : null}
+
         <NumberSet draw={draw} size={featured ? "lg" : "md"} />
 
         <dl className="grid gap-2 text-sm sm:grid-cols-3">
@@ -38,7 +49,7 @@ export function DrawCard({ draw, featured = false }: { draw: LotteryDraw; featur
           <Fact icon={Hash} label="Kỳ quay">
             {draw.drawNo ? `#${draw.drawNo}` : "Không có"}
           </Fact>
-          <Fact icon={Coins} label="Jackpot">
+          <Fact icon={Coins} label="Jackpot kỳ này">
             <PrizeAmount value={draw.jackpot} />
           </Fact>
         </dl>

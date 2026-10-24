@@ -2,10 +2,12 @@ import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
 import { normalizeEuroJackpot } from "../normalize";
+import { fetchLottolandNext } from "./lottoland";
 import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw } from "../types";
 
 const game = getGame("eu_eurojackpot");
 const baseUrl = "https://www.lottoland.com/api/drawings/euroJackpot";
+const referer = "https://www.eurojackpot.org/en/";
 const historyCap = 260;
 const minHistoryRows = 30;
 
@@ -18,13 +20,21 @@ export const euroJackpotAdapter: LotteryAdapter = {
       const warnings: string[] = [];
       try {
         const latestDate = latestEuroJackpotDrawDate();
-        const row = await fetchDraw(latestDate);
+        // Right after draw time the source can still answer without prize data; don't pin that for a day.
+        const row = await fetchDraw(latestDate, TTL.upstream);
         return { data: normalizeEuroJackpot(row, game), warnings };
       } catch {
         warnings.push("Không tải được EuroJackpot ở thời điểm này.");
         return { data: null, warnings };
       }
     });
+  },
+  async getNext() {
+    try {
+      return { data: await fetchLottolandNext("eu_eurojackpot", baseUrl, referer), warnings: [] };
+    } catch {
+      return { data: null, warnings: [] };
+    }
   },
   async getHistory(query = {}) {
     return getCached(`history:eu_eurojackpot:${JSON.stringify(query)}`, TTL.history, async () => {
@@ -53,15 +63,20 @@ export const euroJackpotAdapter: LotteryAdapter = {
   }
 };
 
-async function fetchDraw(date: string) {
-  return getCached(`raw:eurojackpot:${date}`, TTL.history, async () => {
-    const response = await fetchWithTimeout(`${baseUrl}/${date}`, {
-      headers: {
-        Referer: "https://www.eurojackpot.org/en/"
-      }
-    });
-    return normalizePayload(await response.json());
-  });
+async function fetchDraw(date: string, maxAgeMs?: number) {
+  return getCached(
+    `raw:eurojackpot:${date}`,
+    TTL.history,
+    async () => {
+      const response = await fetchWithTimeout(`${baseUrl}/${date}`, {
+        headers: {
+          Referer: referer
+        }
+      });
+      return normalizePayload(await response.json());
+    },
+    { maxAgeMs }
+  );
 }
 
 async function fetchDraws(dates: string[]) {

@@ -1,29 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CalendarDays } from "lucide-react";
+import { ArrowRight, CalendarClock, CalendarDays } from "lucide-react";
 import { toNetMoney } from "@/lib/lottery/tax";
-import type { LotteryDraw, LotteryGame } from "@/lib/lottery/types";
+import type { LotteryDraw, LotteryGame, NextDraw } from "@/lib/lottery/types";
 import { cn } from "@/lib/utils";
 import { GameBadge } from "./GameBadge";
 import { NumberSet } from "./NumberBall";
-import { PrizeAmount } from "./PrizeAmount";
+import { PrizeAmount, PrizeText } from "./PrizeAmount";
 import { usePreferences } from "./PreferencesProvider";
 
-export function JackpotOverview({ games, draws }: { games: LotteryGame[]; draws: LotteryDraw[] }) {
+export function JackpotOverview({
+  games,
+  draws,
+  nextDraws = []
+}: {
+  games: LotteryGame[];
+  draws: LotteryDraw[];
+  nextDraws?: NextDraw[];
+}) {
   const { arrangeGames } = usePreferences();
   const drawsByGame = new Map(draws.map((draw) => [draw.gameId, draw]));
+  const nextByGame = new Map(nextDraws.map((next) => [next.gameId, next]));
 
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {arrangeGames(games).map((game) => (
-        <OverviewCard key={game.id} game={game} draw={drawsByGame.get(game.id)} />
+        <OverviewCard
+          key={game.id}
+          game={game}
+          draw={drawsByGame.get(game.id)}
+          next={nextByGame.get(game.id)}
+        />
       ))}
     </div>
   );
 }
 
-function OverviewCard({ game, draw }: { game: LotteryGame; draw?: LotteryDraw }) {
+function OverviewCard({ game, draw, next }: { game: LotteryGame; draw?: LotteryDraw; next?: NextDraw }) {
   return (
     <Link
       href={`/games/${game.id}`}
@@ -57,9 +71,10 @@ function OverviewCard({ game, draw }: { game: LotteryGame; draw?: LotteryDraw })
         <>
           <NumberSet draw={draw} size="sm" className="mt-3" />
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Metric label="Jackpot" value={draw.jackpot} />
+            <Metric label="Jackpot kỳ này" value={draw.jackpot} />
             <Metric label="Thực nhận" value={toNetMoney(draw.jackpot, draw.gameId)} emphasis />
           </div>
+          {next ? <NextLine next={next} /> : null}
         </>
       ) : (
         <p className="mt-3 rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
@@ -67,6 +82,21 @@ function OverviewCard({ game, draw }: { game: LotteryGame; draw?: LotteryDraw })
         </p>
       )}
     </Link>
+  );
+}
+
+/** The advertised jackpot of the draw that has not happened yet — what lottery sites headline. */
+function NextLine({ next }: { next: NextDraw }) {
+  return (
+    <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-dashed px-2 py-1.5 text-[11px]">
+      <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
+        <CalendarClock className="h-3 w-3 shrink-0" aria-hidden="true" />
+        <span className="truncate">Kỳ tới {formatShortDate(next.drawDate)}</span>
+      </span>
+      <span className="shrink-0 font-semibold tabular-nums">
+        <PrizeText value={next.jackpot} emptyLabel="Chưa công bố" />
+      </span>
+    </div>
   );
 }
 

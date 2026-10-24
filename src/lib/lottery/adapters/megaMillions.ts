@@ -4,13 +4,14 @@ import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
 import { parseMoneyText } from "../money";
 import { normalizeMegaMillions } from "../normalize";
-import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw } from "../types";
+import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw, NextDraw } from "../types";
 
 const gameMeta = getGame("us_mega_millions");
 const baseUrl = "https://data.ny.gov/resource/5xaw-6ayf.json";
 const texasCsvUrl =
   "https://www.texaslottery.com/export/sites/lottery/Games/Mega_Millions/Winning_Numbers/megamillions.csv";
 const texasHtmlUrl = "https://www.texaslottery.com/export/sites/lottery/Games/Mega_Millions/Winning_Numbers/";
+const texasGameUrl = "https://www.texaslottery.com/export/sites/lottery/Games/Mega_Millions/";
 
 if (!gameMeta) throw new Error("Mega Millions game metadata missing.");
 const game = gameMeta;
@@ -19,9 +20,17 @@ export const megaMillionsAdapter: LotteryAdapter = {
   gameId: "us_mega_millions",
   async getLatest() {
     return getCached("latest:us_mega_millions", TTL.latest, async () => {
-      const { draws, warnings } = await loadMegaMillionsDraws("$limit=1&$order=draw_date%20DESC");
+      // The jackpot comes from Texas Lottery; keep that lookup fresh or a new draw shows no prize.
+      const { draws, warnings } = await loadMegaMillionsDraws("$limit=1&$order=draw_date%20DESC", TTL.upstream);
       return { data: draws[0] ?? null, warnings };
     });
+  },
+  async getNext() {
+    try {
+      return { data: await fetchTexasNextJackpot(), warnings: [] };
+    } catch {
+      return { data: null, warnings: [] };
+    }
   },
   async getHistory(query = {}) {
     return getCached(`history:us_mega_millions:${JSON.stringify(query)}`, TTL.history, async () => {
@@ -31,7 +40,32 @@ export const megaMillionsAdapter: LotteryAdapter = {
   }
 };
 
-async function loadMegaMillionsDraws(socrataQuery: string) {
+/**
+ * Texas Lottery states the advertised jackpot for the upcoming draw once in the Mega Millions
+ * block, as "Est. Annuitized Jackpot for MM/DD/YYYY is: $N Million". The site-wide ticker on the
+ * same page repeats the figure without the "is", so that word is the anchor; if the wording ever
+ * changes this returns null and the card simply shows no estimate.
+ */
+async function fetchTexasNextJackpot(): Promise<NextDraw | null> {
+  return getCached("next:us_mega_millions", TTL.upstream, async () => {
+    const response = await fetchWithTimeout(texasGameUrl);
+    const text = cheerio.load(await response.text()).root().text().replace(/\s+/g, " ");
+    const match = text.match(/Jackpot for (\d{2})\/(\d{2})\/(\d{4}) is:\s*(\$[\d.,]+\s*(?:Million|Billion)?)/i);
+    if (!match) return null;
+
+    const [, month, day, year, amount] = match;
+    return {
+      gameId: "us_mega_millions",
+      drawDate: `${year}-${month}-${day}`,
+      jackpot: parseMoneyText(amount, "USD"),
+      sourceName: "Texas Lottery",
+      sourceUrl: texasGameUrl,
+      updatedAt: new Date().toISOString()
+    };
+  });
+}
+
+async function loadMegaMillionsDraws(socrataQuery: string, texasMaxAgeMs?: number) {
   const warnings: string[] = [];
 
   try {
@@ -41,7 +75,7 @@ async function loadMegaMillionsDraws(socrataQuery: string) {
       .sort((a, b) => b.drawDate.localeCompare(a.drawDate));
 
     if (draws.length) {
-      const enrichedDraws = await enrichMegaMillionsJackpots(draws);
+      const enrichedDraws = await enrichMegaMillionsJackpots(draws, texasMaxAgeMs);
       if (enrichedDraws.some((draw) => draw.jackpot)) {
         return { draws: enrichedDraws, warnings };
       }
@@ -52,15 +86,15 @@ async function loadMegaMillionsDraws(socrataQuery: string) {
     warnings.push("NY Open Data đang chặn Mega Millions, đang dùng nguồn Texas Lottery.");
   }
 
-  const texasDraws = await fetchTexasMegaMillions();
+  const texasDraws = await fetchTexasMegaMillions(texasMaxAgeMs);
   if (!texasDraws.length) {
     warnings.push("Texas Lottery tạm thời không trả dữ liệu Mega Millions, vui lòng thử lại sau.");
   }
   return { draws: texasDraws, warnings };
 }
 
-async function enrichMegaMillionsJackpots(draws: LotteryDraw[]) {
-  const texasDraws = await fetchTexasMegaMillions().catch(() => [] as LotteryDraw[]);
+async function enrichMegaMillionsJackpots(draws: LotteryDraw[], texasMaxAgeMs?: number) {
+  const texasDraws = await fetchTexasMegaMillions(texasMaxAgeMs).catch(() => [] as LotteryDraw[]);
   if (!texasDraws.length) return draws;
 
   const texasByDate = new Map(texasDraws.map((draw) => [draw.drawDate, draw]));
@@ -90,20 +124,25 @@ async function fetchMegaMillionsRows(query: string) {
   return (await response.json()) as unknown[];
 }
 
-async function fetchTexasMegaMillions() {
-  return getCached("raw:mega-millions:texas", TTL.history, async () => {
-    const csvDraws = await fetchTexasCsvMegaMillions().catch(() => [] as LotteryDraw[]);
-    const htmlDraws = await fetchTexasHtmlMegaMillions().catch(() => [] as LotteryDraw[]);
-    const htmlByDate = new Map(htmlDraws.map((draw) => [draw.drawDate, draw]));
-    const merged = csvDraws.map((draw) => ({ ...draw, ...(htmlByDate.get(draw.drawDate) ?? {}) }));
-    const csvDates = new Set(csvDraws.map((draw) => draw.drawDate));
+async function fetchTexasMegaMillions(maxAgeMs?: number) {
+  return getCached(
+    "raw:mega-millions:texas",
+    TTL.history,
+    async () => {
+      const csvDraws = await fetchTexasCsvMegaMillions().catch(() => [] as LotteryDraw[]);
+      const htmlDraws = await fetchTexasHtmlMegaMillions().catch(() => [] as LotteryDraw[]);
+      const htmlByDate = new Map(htmlDraws.map((draw) => [draw.drawDate, draw]));
+      const merged = csvDraws.map((draw) => ({ ...draw, ...(htmlByDate.get(draw.drawDate) ?? {}) }));
+      const csvDates = new Set(csvDraws.map((draw) => draw.drawDate));
 
-    for (const draw of htmlDraws) {
-      if (!csvDates.has(draw.drawDate)) merged.push(draw);
-    }
+      for (const draw of htmlDraws) {
+        if (!csvDates.has(draw.drawDate)) merged.push(draw);
+      }
 
-    return merged.sort((a, b) => b.drawDate.localeCompare(a.drawDate));
-  });
+      return merged.sort((a, b) => b.drawDate.localeCompare(a.drawDate));
+    },
+    { maxAgeMs }
+  );
 }
 
 async function fetchTexasCsvMegaMillions() {

@@ -35,6 +35,21 @@ export type LotteryDraw = {
   updatedAt: string;
 };
 
+/**
+ * The upcoming draw and the jackpot the operator advertises for it. This is the figure lottery
+ * sites put on their front page; it is an estimate, and it is not the same number as the rollover
+ * amount of the draw that has already taken place.
+ */
+export type NextDraw = {
+  gameId: LotteryGameId;
+  drawDate: string;
+  drawNo?: string;
+  jackpot: Money | null;
+  sourceName: string;
+  sourceUrl: string;
+  updatedAt: string;
+};
+
 export type LotteryGame = {
   id: LotteryGameId;
   name: string;
@@ -73,5 +88,7 @@ export type HistoryResult = {
 export type LotteryAdapter = {
   gameId: LotteryGameId;
   getLatest: () => Promise<AdapterResult<LotteryDraw | null>>;
+  /** Only for sources that publish the advertised jackpot of the upcoming draw. */
+  getNext?: () => Promise<AdapterResult<NextDraw | null>>;
   getHistory: (query?: HistoryQuery) => Promise<AdapterResult<HistoryResult>>;
 };

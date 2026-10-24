@@ -1,6 +1,6 @@
 import { getFxRates, type FxRates } from "./fx";
 import { adapters, games, isLotteryGameId } from "./registry";
-import type { HistoryQuery, LotteryDraw, LotteryGameId } from "./types";
+import type { HistoryQuery, LotteryDraw, LotteryGameId, NextDraw } from "./types";
 
 export async function getGames() {
   return games;
@@ -14,21 +14,27 @@ export async function getLatest(gameId?: LotteryGameId) {
   const settled = await Promise.all(
     selected.map(async (adapter) => {
       if (!adapter) return null;
-      try {
-        return await adapter.getLatest();
-      } catch {
-        const game = games.find((item) => item.id === adapter.gameId);
-        return {
-          data: null,
-          warnings: [`Không tải được kết quả ${game?.name ?? adapter.gameId} ở thời điểm này.`]
-        };
-      }
+
+      // The upcoming jackpot is a bonus: a source that cannot supply it must not sink the result.
+      const [latest, next] = await Promise.all([
+        adapter.getLatest().catch(() => {
+          const game = games.find((item) => item.id === adapter.gameId);
+          return {
+            data: null,
+            warnings: [`Không tải được kết quả ${game?.name ?? adapter.gameId} ở thời điểm này.`]
+          };
+        }),
+        adapter.getNext?.().catch(() => null) ?? null
+      ]);
+
+      return { latest, next };
     })
   );
 
   return {
-    draws: settled.flatMap((result) => (result?.data ? [result.data] : [])) as LotteryDraw[],
-    warnings: dedupe(settled.flatMap((result) => result?.warnings ?? []))
+    draws: settled.flatMap((result) => (result?.latest.data ? [result.latest.data] : [])) as LotteryDraw[],
+    nextDraws: settled.flatMap((result) => (result?.next?.data ? [result.next.data] : [])) as NextDraw[],
+    warnings: dedupe(settled.flatMap((result) => result?.latest.warnings ?? []))
   };
 }
 
