@@ -1,7 +1,7 @@
 import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
-import { money, parseMoneyText } from "../money";
+import { money } from "../money";
 import { normalizeEuroMillions } from "../normalize";
 import { fetchLottolandNext } from "./lottoland";
 import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw } from "../types";
@@ -175,7 +175,9 @@ async function fetchLottolandLatest(): Promise<LotteryDraw> {
       prize: prizeCents ? money(prizeCents / 100, "EUR") : null
     };
   });
-  const jackpot = prizeTable[0]?.prize ?? parseMoneyText(readString(row, "marketingJackpot"), "EUR");
+  // `marketingJackpot` is in whole millions of euro, unlike the cent amounts in `odds`.
+  const marketingMillions = readNumber(row, "marketingJackpot");
+  const jackpot = prizeTable[0]?.prize ?? (marketingMillions ? money(marketingMillions * 1_000_000, "EUR") : null);
   const drawDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
   return {

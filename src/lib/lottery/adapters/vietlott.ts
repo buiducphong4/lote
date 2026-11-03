@@ -17,21 +17,21 @@ const config: Record<
     technicalId: "power_535",
     mainCount: 5,
     minhNgocPath: "lotto535",
-    minhNgocSelector: ".xslotto535"
+    minhNgocSelector: ".vkt-lotto"
   },
   vietlott_power_655: {
     slug: "655",
     technicalId: "power_655",
     mainCount: 6,
     minhNgocPath: "power",
-    minhNgocSelector: ".xspower"
+    minhNgocSelector: ".vkt-power"
   },
   vietlott_mega_645: {
     slug: "645",
     technicalId: "power_645",
     mainCount: 6,
     minhNgocPath: "mega",
-    minhNgocSelector: ".xsmega"
+    minhNgocSelector: ".vkt-mega"
   }
 };
 
@@ -64,7 +64,7 @@ export function createVietlottAdapter(gameId: VietlottGameId): LotteryAdapter {
           const html = await response.text();
           return { data: parseOfficialVietlott(html, gameId, sourceUrl), warnings };
         } catch {
-          // Vercel can be blocked by Vietlott, so keep a second live source before falling back to JSONL.
+          // vietlott.vn only answers Vietnamese IPs, so a deployed server never gets through here.
         }
 
         try {
@@ -75,8 +75,19 @@ export function createVietlottAdapter(gameId: VietlottGameId): LotteryAdapter {
 
         try {
           const fallback = await readVietlottJsonl(gameId);
-          return { data: fallback[0] ? await enrichVietlottDraw(gameId, fallback[0]) : null, warnings };
+          const draw = fallback[0] ? await enrichVietlottDraw(gameId, fallback[0]) : null;
+
+          // The community dataset carries only the numbers. Say so rather than leaving a bare
+          // "Chưa công bố" that looks like a bug.
+          if (draw && !draw.jackpot) {
+            warnings.push(
+              `${game.name}: chưa lấy được giá trị jackpot. vietlott.vn chặn truy cập từ ngoài Việt Nam và nguồn dự phòng cũng không trả về số tiền; bộ số và kỳ quay vẫn chính xác.`
+            );
+          }
+
+          return { data: draw, warnings };
         } catch {
+          warnings.push(`Không tải được kết quả ${game.name} ở thời điểm này.`);
           return { data: null, warnings };
         }
       });
@@ -200,13 +211,14 @@ async function readMinhNgocLatest(gameId: VietlottGameId) {
   }
 
   const drawNo = normalizeDrawNo(root.find(".kyve").first().text());
-  const dateText = root.find(".ngay").first().text();
-  const dateMatch = dateText.match(/(\d{2}\/\d{2}\/\d{4})/);
-  const numberTexts = root
-    .find(".result .kq")
-    .map((_, element) => $(element).attr("data") ?? $(element).text())
-    .get();
-  const numbers = numberTexts.map((value) => Number(String(value).trim())).filter(Number.isFinite);
+  // The heading reads "Trực tiếp Thứ ba ngày 03/11/2026, 18 giờ".
+  const dateMatch = root.find(".vk-ten").first().text().match(/(\d{2}\/\d{2}\/\d{4})/);
+  // Each ball carries its value in a `data` attribute; the special one sits in the trailing `li.db`.
+  const numbers = root
+    .find(".vk-bong li .kq")
+    .map((_, element) => Number(($(element).attr("data") ?? $(element).text()).trim()))
+    .get()
+    .filter(Number.isFinite);
   const mainCount = details.mainCount;
 
   if (!drawNo || !dateMatch || numbers.length < mainCount) {
@@ -214,26 +226,32 @@ async function readMinhNgocLatest(gameId: VietlottGameId) {
   }
 
   const prizeTable = root
-    .find("table tbody tr")
+    .find("table.vk-giai tbody tr")
     .map((_, row) => {
-      const cells = $(row)
-        .find("td")
-        .map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim())
-        .get();
-      if (cells.length < 4) return null;
+      const cells = $(row).find("td");
+      const tier = $(row).find("th").first().text().replace(/\s+/g, " ").trim();
+      if (!tier || cells.length < 3) return null;
+
+      const matchLabel = cells.eq(0).find("[aria-label]").first().attr("aria-label");
+      const winnerCell = cells.eq(1);
+      const prizeCell = cells.eq(2);
+
       return {
-        tier: cells[0],
-        match: cells[1],
-        winners: parseVietnameseNumber(cells[2]),
-        prize: parseMoneyText(cells[3], "VND")
+        tier,
+        match: matchLabel?.replace(/\s+/g, " ").trim(),
+        winners: parseVietnameseNumber(winnerCell.find("[data]").first().attr("data") ?? winnerCell.text()),
+        prize: readMinhNgocPrize(prizeCell.find("[data]").first().attr("data"), prizeCell.text())
       };
     })
     .get()
     .filter(Boolean) as PrizeTier[];
   const mainNumbers = numbers.slice(0, mainCount);
   const extraNumbers = numbers.slice(mainCount);
-  const jackpot = readMinhNgocPrize(root.find(".jackpot").first().attr("data"), root.find(".jackpot").first().text());
-  const jackpot2 = readMinhNgocPrize(root.find(".jackpot2").first().attr("data"), root.find(".jackpot2").first().text());
+  // Scope to the header panel: the prize table repeats the same `.jackpot` nodes.
+  const jackpotNode = root.find(".vk-jp .jackpot").first();
+  const jackpot2Node = root.find(".vk-jp .jackpot2").first();
+  const jackpot = readMinhNgocPrize(jackpotNode.attr("data"), jackpotNode.text());
+  const jackpot2 = readMinhNgocPrize(jackpot2Node.attr("data"), jackpot2Node.text());
 
   return {
     id: `${gameId}-${drawNo}`,

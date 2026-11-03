@@ -186,7 +186,7 @@ export function normalizeEuroJackpot(raw: unknown, game: LotteryGame): LotteryDr
     drawNo: drawNo ?? undefined,
     mainNumbers: numbers.slice(0, 5).sort((a, b) => a - b),
     bonusNumbers: euroNumbers.slice(0, 2).sort((a, b) => a - b),
-    jackpot: fromEuroCents(rank1Prize) ?? parseMoneyText(readString(row, ["jackpot", "marketingJackpot"]), "EUR"),
+    jackpot: fromEuroCents(rank1Prize) ?? fromLottolandMillions(row),
     prizeTable,
     sourceName: "Lottoland EuroJackpot draw API",
     sourceUrl: `https://www.lottoland.com/api/drawings/euroJackpot/${drawDate.replaceAll("-", "")}`,
@@ -222,6 +222,15 @@ export function toVietlottDataFile(gameId: LotteryGameId) {
 
 function formatEuroTier(main: number | null, stars: number | null) {
   return `${main ?? "?"} số + ${stars ?? "?"} sao`;
+}
+
+/**
+ * Lottoland writes `jackpot` / `marketingJackpot` in whole millions of euro, so a payload saying
+ * "33" means €33M. Reading it as euro turns a nine-figure jackpot into pocket change.
+ */
+function fromLottolandMillions(row: Record<string, unknown>): Money | null {
+  const millions = readNumber(row, ["marketingJackpot", "jackpot"]);
+  return millions ? money(millions * 1_000_000, "EUR") : null;
 }
 
 function fromEuroCents(value: number | null): Money | null {

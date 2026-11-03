@@ -116,6 +116,24 @@ describe("normalize lottery data", () => {
     expect(draw.prizeTable?.[0].tier).toBe("5 số + 2 sao");
   });
 
+  it("reads a Lottoland jackpot written in whole millions when the prize table is empty", () => {
+    // Right after a draw Lottoland publishes `jackpot` with no `odds`; "33" there means €33M.
+    const draw = normalizeEuroJackpot(
+      {
+        nr: 1004,
+        currency: "EUR",
+        date: { day: 3, month: 11, year: 2026 },
+        numbers: [2, 5, 12, 32, 43],
+        euroNumbers: [1, 3],
+        jackpot: "33",
+        marketingJackpot: "33"
+      },
+      euroJackpotGame
+    );
+
+    expect(draw.jackpot).toEqual({ amount: 33_000_000, currency: "EUR" });
+  });
+
   it("normalizes EuroJackpot numbers, euro numbers, jackpot, and prize table", () => {
     const draw = normalizeEuroJackpot(
       {
