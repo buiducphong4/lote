@@ -75,6 +75,17 @@ diễn ra ở tầng UI.
 trong `public/icons/`. Không có manifest thì Brave/Chrome/Edge không có "app identity" để cài, nên
 mục **Install** không hiện ra. Icon được sinh từ `src/app/icon.svg` bằng `sharp`.
 
+Cửa sổ sau khi cài chiếm trọn màn hình nên status bar, tai thỏ hoặc title bar có thể đè lên nội dung.
+`.app-shell` và `.app-header` trong `globals.css` cộng thêm `env(safe-area-inset-*)` để tránh việc đó
+(header dùng `position: sticky` nên `top` tính theo viewport chứ không theo padding của shell).
+
+Trên desktop, `display_override: ["window-controls-overlay", ...]` giao luôn dải title bar cho trang:
+`.app-titlebar` là một dải trống có `app-region: drag` (không có nó thì không kéo được cửa sổ), và
+nội dung được đẩy xuống dưới `env(titlebar-area-height)`. Trình duyệt không hỗ trợ sẽ tự lùi về
+`standalone`.
+
+> Nếu đã cài app từ trước khi có manifest, phải **gỡ ra cài lại** — bản cũ chỉ là shortcut mở trong tab.
+
 ## Múi giờ kỳ quay
 
 Nhà điều hành công bố kỳ quay theo ngày **ở nước họ**. EuroMillions quay 21:00 giờ Paris ngày 03/11

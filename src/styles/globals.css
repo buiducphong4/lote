@@ -399,6 +399,8 @@
 
 body {
   min-height: 100vh;
+  /* Avoids the gap a mobile browser's collapsing URL bar leaves behind. */
+  min-height: 100dvh;
   overflow-x: hidden;
   color: hsl(var(--foreground));
   background: var(--body-bg);
@@ -481,4 +483,69 @@ h3,
 
 .warn-text {
   color: hsl(var(--warn-fg));
+}
+
+/*
+ * An installed window hands the page the whole screen, so a status bar, notch or title bar can sit
+ * on top of the content. The shell keeps its usual padding and adds whatever inset the device
+ * reports; the sticky header needs the same treatment because `top` resolves against the viewport,
+ * not against the shell's padding.
+ */
+.app-shell {
+  padding: calc(0.75rem + env(safe-area-inset-top, 0px)) calc(0.75rem + env(safe-area-inset-right, 0px))
+    calc(0.75rem + env(safe-area-inset-bottom, 0px)) calc(0.75rem + env(safe-area-inset-left, 0px));
+}
+
+.app-header {
+  top: calc(0.5rem + env(safe-area-inset-top, 0px));
+}
+
+@media (min-width: 640px) {
+  .app-shell {
+    padding: calc(1.25rem + env(safe-area-inset-top, 0px)) calc(1.5rem + env(safe-area-inset-right, 0px))
+      calc(1.25rem + env(safe-area-inset-bottom, 0px)) calc(1.5rem + env(safe-area-inset-left, 0px));
+  }
+
+  .app-header {
+    top: calc(1rem + env(safe-area-inset-top, 0px));
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    padding-right: calc(2rem + env(safe-area-inset-right, 0px));
+    padding-left: calc(2rem + env(safe-area-inset-left, 0px));
+  }
+}
+
+/*
+ * An installed desktop window otherwise spends its top strip on a browser title bar. With
+ * window-controls-overlay the page owns that strip: keep it empty so it reads as part of the app
+ * background, mark it draggable (nothing else would move the window), and push content below it.
+ * The strip is hidden everywhere else, and browsers without the feature fall back to `standalone`.
+ */
+.app-titlebar {
+  display: none;
+}
+
+@media (display-mode: window-controls-overlay) {
+  .app-titlebar {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: env(titlebar-area-x, 0px);
+    width: env(titlebar-area-width, 100%);
+    height: env(titlebar-area-height, 2.25rem);
+    -webkit-app-region: drag;
+    app-region: drag;
+    z-index: 60;
+  }
+
+  .app-shell {
+    padding-top: calc(0.5rem + env(titlebar-area-height, 2.25rem));
+  }
+
+  .app-header {
+    top: calc(0.25rem + env(titlebar-area-height, 2.25rem));
+  }
 }

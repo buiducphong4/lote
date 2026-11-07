@@ -45,11 +45,14 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "Lote",
-    statusBarStyle: "black-translucent"
+    // "black-translucent" would slide the page under the iOS status bar.
+    statusBarStyle: "default"
   }
 };
 
 export const viewport: Viewport = {
+  // Lets the page reach into the notch area; .app-shell pads the content back out of it.
+  viewportFit: "cover",
   // Tints the browser and installed-app chrome to match whichever mode the device is in.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f9f6f1" },
@@ -68,10 +71,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
       <body className="antialiased">
+        {/* Only rendered as a drag strip when the installed window gives us its title bar. */}
+        <div className="app-titlebar" aria-hidden="true" />
         <ThemeProvider>
           <PreferencesProvider rates={rates} defaultOrder={defaultOrder}>
-            <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-3 py-3 sm:px-6 sm:py-5 lg:px-8">
-              <header className="glass sticky top-2 z-50 mb-5 rounded-xl p-2 sm:top-4 sm:mb-8 sm:px-3 sm:py-2.5">
+            <div className="app-shell mx-auto flex min-h-screen w-full max-w-7xl flex-col">
+              <header className="glass app-header sticky z-50 mb-5 rounded-xl p-2 sm:mb-8 sm:px-3 sm:py-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
                     href="/"
