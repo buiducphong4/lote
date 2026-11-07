@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarClock } from "lucide-react";
+import { formatVnLong } from "@/lib/lottery/drawTime";
 import type { NextDraw } from "@/lib/lottery/types";
 import { cn } from "@/lib/utils";
 import { PrizeAmount } from "./PrizeAmount";
@@ -15,7 +16,8 @@ export function NextDrawPanel({ next, className }: { next: NextDraw; className?:
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          Jackpot kỳ tới · {formatDate(next.drawDate)}
+          Jackpot kỳ tới ·{" "}
+          {next.drawAt ? `${formatVnLong(next.drawAt)} (giờ VN)` : formatDate(next.drawDate)}
           {next.drawNo ? <span className="text-xs">#{next.drawNo}</span> : null}
         </span>
         <PrizeAmount value={next.jackpot} className="text-lg font-semibold tabular-nums" />

@@ -1,5 +1,6 @@
 import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
+import { drawInstant } from "../drawTime";
 import { money } from "../money";
 import type { LotteryGameId, NextDraw } from "../types";
 
@@ -26,10 +27,14 @@ export async function fetchLottolandNext(
 
     const millions = toNumber(row.marketingJackpot) ?? toNumber(row.jackpot);
     const drawNo = toNumber(row.nr);
+    const drawDate = `${year}-${pad(month)}-${pad(day)}`;
+    // Lottoland reports the draw clock in its own Central European time.
+    const drawAt = drawInstant(drawDate, toNumber(date.hour) ?? 0, toNumber(date.minute) ?? 0, "Europe/Berlin");
 
     return {
       gameId,
-      drawDate: `${year}-${pad(month)}-${pad(day)}`,
+      drawDate,
+      drawAt: drawAt ?? undefined,
       drawNo: drawNo ? String(drawNo) : undefined,
       jackpot: millions ? money(millions * 1_000_000, "EUR") : null,
       sourceName: "Lottoland",

@@ -69,6 +69,21 @@ diễn ra ở tầng UI.
 - Chế độ `Gốc` giữ nguyên tiền tệ của từng giải và hiển thị thêm dòng quy đổi sang VND cho các giải nước ngoài.
 - Tỷ giá được cache 6 giờ.
 
+## Cài đặt như một ứng dụng (PWA)
+
+`src/app/manifest.ts` phục vụ `/manifest.webmanifest`, kèm icon PNG 192/512 và một bản `maskable`
+trong `public/icons/`. Không có manifest thì Brave/Chrome/Edge không có "app identity" để cài, nên
+mục **Install** không hiện ra. Icon được sinh từ `src/app/icon.svg` bằng `sharp`.
+
+## Múi giờ kỳ quay
+
+Nhà điều hành công bố kỳ quay theo ngày **ở nước họ**. EuroMillions quay 21:00 giờ Paris ngày 03/11
+thì ở Việt Nam đã là 03:00 ngày 04/11, nên mục "Jackpot kỳ tới" dễ trông như bị lùi một ngày.
+
+`NextDraw.drawAt` lưu đúng thời điểm đó dưới dạng UTC instant (`src/lib/lottery/drawTime.ts`,
+có xử lý giờ mùa hè), còn giao diện hiển thị theo `Asia/Ho_Chi_Minh`. Ngày của **kỳ đã quay** vẫn
+giữ nguyên theo nguồn, để đối chiếu với trang chính thức không bị lệch.
+
 ## Themes
 
 Bốn bộ giao diện khác nhau về màu, phông chữ, bo góc, đổ bóng và hình dạng quả cầu số. Chọn bằng

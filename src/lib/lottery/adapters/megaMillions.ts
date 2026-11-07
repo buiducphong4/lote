@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import { getCached, TTL } from "../cache";
 import { fetchWithTimeout } from "../fetcher";
 import { getGame } from "../games";
+import { drawInstant } from "../drawTime";
 import { parseMoneyText } from "../money";
 import { normalizeMegaMillions } from "../normalize";
 import type { HistoryQuery, HistoryResult, LotteryAdapter, LotteryDraw, NextDraw } from "../types";
@@ -54,9 +55,14 @@ async function fetchTexasNextJackpot(): Promise<NextDraw | null> {
     if (!match) return null;
 
     const [, month, day, year, amount] = match;
+    const drawDate = `${year}-${month}-${day}`;
+    // Mega Millions draws at 22:00 Central, which Texas Lottery does not state on the page.
+    const drawAt = drawInstant(drawDate, 22, 0, "America/Chicago");
+
     return {
       gameId: "us_mega_millions",
-      drawDate: `${year}-${month}-${day}`,
+      drawDate,
+      drawAt: drawAt ?? undefined,
       jackpot: parseMoneyText(amount, "USD"),
       sourceName: "Texas Lottery",
       sourceUrl: texasGameUrl,

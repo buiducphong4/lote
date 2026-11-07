@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, Inter, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
@@ -36,7 +36,25 @@ const fontVariables = `${inter.variable} ${beVietnam.variable} ${playfair.variab
 
 export const metadata: Metadata = {
   title: "Lote · Kết quả xổ số",
-  description: "Tra cứu kết quả Vietlott, Mega Millions, EuroMillions và EuroJackpot mới nhất, quy đổi sang VND."
+  description: "Tra cứu kết quả Vietlott, Mega Millions, EuroMillions và EuroJackpot mới nhất, quy đổi sang VND.",
+  applicationName: "Lote",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icons/apple-touch-icon.png"
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Lote",
+    statusBarStyle: "black-translucent"
+  }
+};
+
+export const viewport: Viewport = {
+  // Tints the browser and installed-app chrome to match whichever mode the device is in.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9f6f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1019" }
+  ]
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

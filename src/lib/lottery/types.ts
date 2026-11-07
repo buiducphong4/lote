@@ -42,7 +42,10 @@ export type LotteryDraw = {
  */
 export type NextDraw = {
   gameId: LotteryGameId;
+  /** The operator's own local date, as it publishes it. */
   drawDate: string;
+  /** The same moment as a UTC instant, so the UI can show it in Vietnam time. */
+  drawAt?: string;
   drawNo?: string;
   jackpot: Money | null;
   sourceName: string;

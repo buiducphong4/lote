@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, CalendarClock, CalendarDays } from "lucide-react";
+import { formatVnShort } from "@/lib/lottery/drawTime";
 import { toNetMoney } from "@/lib/lottery/tax";
 import type { LotteryDraw, LotteryGame, NextDraw } from "@/lib/lottery/types";
 import { cn } from "@/lib/utils";
@@ -91,7 +92,9 @@ function NextLine({ next }: { next: NextDraw }) {
     <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-dashed px-2 py-1.5 text-[11px]">
       <span className="flex min-w-0 items-center gap-1 text-muted-foreground">
         <CalendarClock className="h-3 w-3 shrink-0" aria-hidden="true" />
-        <span className="truncate">Kỳ tới {formatShortDate(next.drawDate)}</span>
+        <span className="truncate">
+          Kỳ tới {next.drawAt ? formatVnShort(next.drawAt) : formatShortDate(next.drawDate)}
+        </span>
       </span>
       <span className="shrink-0 font-semibold tabular-nums">
         <PrizeText value={next.jackpot} emptyLabel="Chưa công bố" />
