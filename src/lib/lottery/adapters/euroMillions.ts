@@ -43,6 +43,7 @@ export const euroMillionsAdapter: LotteryAdapter = {
         try {
           return { data: await fetchLottolandLatest(), warnings };
         } catch {
+          warnings.push("Không tải được EuroMillions ở thời điểm này.");
           return { data: null, warnings };
         }
       }
@@ -121,14 +122,19 @@ function yearsForQuery(query: HistoryQuery) {
  * The latest draw must not be served from the 24h history cache, or a new result stays invisible
  * for a day. Scope the refresh to the current year as well: that payload is ~90KB against ~2MB for
  * every draw since 2004, and the all-draws endpoint answers 429 when polled.
+ *
+ * If the host does not answer there is nothing to gain from asking it again for the far bigger
+ * payload — that is how a single dead source once cost the page four chained timeouts. Give it a
+ * short leash and let getLatest fall through to Lottoland instead.
  */
+const latestTimeoutMs = 4000;
+
 async function fetchLatestRows() {
   const year = String(new Date().getUTCFullYear());
-  const rows = await fetchDraws(year, TTL.upstream).catch(() => [] as unknown[]);
-  return rows.length ? rows : fetchDraws(undefined, TTL.upstream);
+  return fetchDraws(year, TTL.upstream, latestTimeoutMs);
 }
 
-async function fetchDraws(year?: string, maxAgeMs?: number) {
+async function fetchDraws(year?: string, maxAgeMs?: number, timeoutMs?: number) {
   return getCached(
     `raw:euromillions:${year ?? "all"}`,
     TTL.history,
@@ -136,10 +142,10 @@ async function fetchDraws(year?: string, maxAgeMs?: number) {
       const query = year ? `?year=${encodeURIComponent(year)}` : "";
 
       try {
-        const response = await fetchWithTimeout(`${preferredUrl}${query}`);
+        const response = await fetchWithTimeout(`${preferredUrl}${query}`, {}, timeoutMs);
         return normalizePayload(await response.json());
       } catch {
-        const response = await fetchWithTimeout(`${fallbackUrl}${query}`);
+        const response = await fetchWithTimeout(`${fallbackUrl}${query}`, {}, timeoutMs);
         return normalizePayload(await response.json());
       }
     },

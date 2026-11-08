@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { clearLatestLotteryCache } from "@/lib/lottery/cache";
+import { clearHostCooldowns } from "@/lib/lottery/fetcher";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +18,7 @@ export async function POST() {
 
   lastClearedAt = now;
   clearLatestLotteryCache();
+  // A deliberate refresh is also a request to give a host that just failed another chance.
+  clearHostCooldowns();
   return NextResponse.json({ cleared: true });
 }
