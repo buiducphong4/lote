@@ -119,7 +119,8 @@ function parseOfficialVietlott(html: string, gameId: VietlottGameId, sourceUrl?:
   const numberTexts = $(".day_so_ket_qua_v2 span.bong_tron")
     .map((_, element) => $(element).text().trim())
     .get();
-  const numbers = numberTexts.map((value) => Number(value)).filter(Number.isFinite);
+  // vietlott.vn also puts the next draw's balls up blank before draw time, and `Number("")` is 0.
+  const numbers = numberTexts.map((value) => Number(value)).filter((value) => Number.isFinite(value) && value > 0);
   const mainCount = config[gameId].mainCount;
 
   if (!drawMatch || numbers.length < mainCount) {
@@ -192,38 +193,78 @@ async function readVietlottJsonl(gameId: VietlottGameId) {
 }
 
 async function readMinhNgocLatest(gameId: VietlottGameId) {
-  const game = getGame(gameId);
-  if (!game) throw new Error(`Unknown Vietlott game: ${gameId}`);
+  const liveUrl = `https://xosominhngoc.net.vn/${config[gameId].minhNgocPath}`;
+  const live = await loadMinhNgoc(liveUrl);
+  const latest = parseMinhNgocBlock(live, gameId, liveUrl);
+  if (latest) return latest;
 
-  const details = config[gameId];
-  const sourceUrl = `https://xosominhngoc.net.vn/${details.minhNgocPath}`;
-  const response = await fetchWithTimeout(sourceUrl, {
+  /*
+   * Minh Ngoc puts the upcoming draw on the front page hours before it happens, with the balls
+   * rendered empty and the jackpot masked. Read as a result that becomes a card of six zeroes, so
+   * when the headline block holds nothing yet, step back through the dated archive pages instead.
+   */
+  for (const url of minhNgocArchiveUrls(live).slice(0, 2)) {
+    const page = await loadMinhNgoc(url);
+    const archived = parseMinhNgocBlock(page, gameId, url);
+    if (archived) return archived;
+  }
+
+  throw new Error("Minh Ngoc has no completed draw for this game.");
+}
+
+async function loadMinhNgoc(url: string) {
+  const response = await fetchWithTimeout(url, {
     headers: {
       Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       Referer: "https://xosominhngoc.net.vn/"
     }
   });
-  const $ = cheerio.load(await response.text());
+
+  return cheerio.load(await response.text());
+}
+
+/** The dated result pages linked from a game's page, newest first: "/kqxs-mega-645-ngay-06-11-2026". */
+function minhNgocArchiveUrls($: cheerio.CheerioAPI) {
+  const dateByHref = new Map<string, string>();
+
+  $("a[href]").each((_, element) => {
+    const href = $(element).attr("href") ?? "";
+    const match = href.match(/^\/kqxs-[a-z0-9-]+-ngay-(\d{2})-(\d{2})-(\d{4})$/);
+    if (match) dateByHref.set(href, `${match[3]}-${match[2]}-${match[1]}`);
+  });
+
+  return [...dateByHref.entries()]
+    .sort((a, b) => b[1].localeCompare(a[1]))
+    .map(([href]) => `https://xosominhngoc.net.vn${href}`);
+}
+
+/** Returns null when the block describes a draw that has not been held yet. */
+function parseMinhNgocBlock($: cheerio.CheerioAPI, gameId: VietlottGameId, sourceUrl: string): LotteryDraw | null {
+  const game = getGame(gameId);
+  if (!game) throw new Error(`Unknown Vietlott game: ${gameId}`);
+
+  const details = config[gameId];
   const root = $(details.minhNgocSelector).first();
+  if (!root.length) return null;
 
-  if (!root.length) {
-    throw new Error("Minh Ngoc fallback missing result container.");
-  }
-
-  const drawNo = normalizeDrawNo(root.find(".kyve").first().text());
-  // The heading reads "Trực tiếp Thứ ba ngày 03/11/2026, 18 giờ".
+  const drawNo = normalizeDrawNo(root.find(".vk-kyve, .kyve").first().text());
+  // The heading reads "... ngay 06/11/2026, 18 gio" on both the live page and the dated ones.
   const dateMatch = root.find(".vk-ten").first().text().match(/(\d{2}\/\d{2}\/\d{4})/);
-  // Each ball carries its value in a `data` attribute; the special one sits in the trailing `li.db`.
   const numbers = root
-    .find(".vk-bong li .kq")
-    .map((_, element) => Number(($(element).attr("data") ?? $(element).text()).trim()))
+    .find(".vk-bong li")
+    .map((_, element) => {
+      const item = $(element);
+      // The live page animates each ball and keeps its value in a `data` attribute; a dated page
+      // simply prints it. Ahead of draw time both render the balls empty.
+      const ball = item.find(".kq").first();
+      return (ball.attr("data") ?? (ball.length ? ball.text() : item.text())).trim();
+    })
     .get()
-    .filter(Number.isFinite);
-  const mainCount = details.mainCount;
+    .map((value) => Number(value))
+    // `Number("")` is 0, which looks exactly like a drawn ball until you notice there are six of them.
+    .filter((value) => Number.isFinite(value) && value > 0);
 
-  if (!drawNo || !dateMatch || numbers.length < mainCount) {
-    throw new Error("Minh Ngoc fallback missing draw number, date, or numbers.");
-  }
+  if (!drawNo || !dateMatch || numbers.length < details.mainCount) return null;
 
   const prizeTable = root
     .find("table.vk-giai tbody tr")
@@ -245,13 +286,16 @@ async function readMinhNgocLatest(gameId: VietlottGameId) {
     })
     .get()
     .filter(Boolean) as PrizeTier[];
-  const mainNumbers = numbers.slice(0, mainCount);
-  const extraNumbers = numbers.slice(mainCount);
+
+  const mainNumbers = numbers.slice(0, details.mainCount);
+  const extraNumbers = numbers.slice(details.mainCount);
   // Scope to the header panel: the prize table repeats the same `.jackpot` nodes.
   const jackpotNode = root.find(".vk-jp .jackpot").first();
   const jackpot2Node = root.find(".vk-jp .jackpot2").first();
-  const jackpot = readMinhNgocPrize(jackpotNode.attr("data"), jackpotNode.text());
-  const jackpot2 = readMinhNgocPrize(jackpot2Node.attr("data"), jackpot2Node.text());
+  // Dated pages drop the animated nodes and print the amount in a plain <strong> instead.
+  const plainAmounts = root.find(".vk-jp strong");
+  const jackpot = readMinhNgocPrize(jackpotNode.attr("data"), jackpotNode.text() || plainAmounts.eq(0).text());
+  const jackpot2 = readMinhNgocPrize(jackpot2Node.attr("data"), jackpot2Node.text() || plainAmounts.eq(1).text());
 
   return {
     id: `${gameId}-${drawNo}`,
