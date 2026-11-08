@@ -46,6 +46,30 @@ export function zonedTimeToIso(
   return Number.isFinite(instant) ? new Date(instant).toISOString() : null;
 }
 
+/** The calendar date an instant falls on in `timeZone`, as the operator would write it. */
+export function zonedCalendarDate(utcMs: number, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(utcMs));
+
+  const read = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+  const year = read("year");
+  const month = read("month");
+  const day = read("day");
+
+  return {
+    year,
+    month,
+    day,
+    isoDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    // A bare calendar date has no zone to go wrong: read its weekday in UTC.
+    weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  };
+}
+
 /** Builds the instant from an ISO date plus the operator's local draw time. */
 export function drawInstant(isoDate: string, hour: number, minute: number, timeZone: string) {
   const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);

@@ -9,8 +9,13 @@ import { Warnings } from "@/components/lottery/Warnings";
 import { Button } from "@/components/ui/button";
 import { getGames, getLatest } from "@/lib/lottery/service";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+/**
+ * Served from Vercel's cache and refreshed in the background, so nobody waits on the upstream
+ * sources — not even the first visitor to reach a cold instance. getLatest then holds its own
+ * answer for as long as each game's draw schedule says nothing can change, which keeps those
+ * background refreshes nearly free.
+ */
+export const revalidate = 120;
 
 export default async function HomePage() {
   const [games, latest] = await Promise.all([getGames(), getLatest()]);

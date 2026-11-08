@@ -139,7 +139,48 @@ Một payload có thể vừa phục vụ lịch sử vừa phục vụ kỳ m�
 `maxAgeMs` vào `getCached` để không bị trả về bản đã nằm trong cache cả ngày — nếu thiếu bước này, một kỳ quay
 mới có thể không xuất hiện suốt 24 giờ dù nguồn đã có dữ liệu.
 
-The cache is per server process. In serverless deployments it may be reset between cold starts.
+### Cache theo lịch quay
+
+`src/lib/lottery/schedule.ts` giữ lịch quay của từng sản phẩm, nên phần lớn thời gian ta **biết chắc** nguồn
+không thể có gì mới:
+
+| Sản phẩm | Ngày quay | Giờ quay |
+| --- | --- | --- |
+| Lotto 5/35 | hằng ngày | 13:00 (giờ VN) |
+| Power 6/55 | T3, T5, T7 | 18:00 (giờ VN) |
+| Mega 6/45 | T4, T6, CN | 18:00 (giờ VN) |
+| Mega Millions | T3, T6 | 22:00 America/Chicago |
+| EuroMillions | T3, T6 | 21:30 Europe/Paris |
+| EuroJackpot | T3, T6 | 21:00 Europe/Berlin |
+
+Ngày giờ của Vietlott lấy từ chính các trang lưu trữ theo ngày của Minh Ngọc. `latestTtlMs` dùng bảng này:
+
+- **Giữa hai kỳ** — giữ nguyên kết quả cho tới sát kỳ kế tiếp, trần 6 giờ.
+- **Đã tới giờ quay nhưng kết quả chưa về** — hỏi lại mỗi 3 phút cho tới khi dữ liệu bắt kịp.
+- **Tải lỗi** — chỉ giữ 60 giây, để nguồn sống lại là thấy ngay.
+
+Vì TTL phụ thuộc vào thứ nhận được, `getCached` nhận `ttlMs` dưới dạng hàm: trong lúc loader còn chạy, entry
+sống tạm 30 giây để gộp các lượt đọc song song của cùng một lượt render.
+
+### Cache ở tầng trang
+
+Trang chủ được prerender và làm mới nền (`export const revalidate`), nên người truy cập không bao giờ phải chờ
+nguồn — kể cả người đầu tiên rơi vào một instance nguội. Vì vậy `fetchWithTimeout` **không** đặt `revalidate: 0`:
+làm thế sẽ ép mọi trang có kết quả xổ số sang render động và mất hẳn lợi ích này.
+
+`/latest` để query `?gameId=` nên vẫn render theo từng request, nhưng dùng chung các tầng cache bên dưới.
+
+Nút **Làm mới** gọi `POST /api/lottery/refresh`: xoá cache trong RAM, xoá cooldown host, `revalidateTag` cho tầng
+fetch và `revalidatePath` cho trang đã prerender — thiếu bước cuối thì bấm nút sẽ không đổi được gì.
+
+### Host đang chết
+
+`fetchWithTimeout` nhớ host vừa timeout/từ chối kết nối trong 60 giây. Nhiều adapter thử hai URL trên cùng một
+host, nên nếu không có bước này một nguồn chết sẽ tốn hai lần timeout đầy đủ. Lỗi HTTP (429, 503) **không** tính:
+host vẫn trả lời thì đường khác có thể vẫn chạy.
+
+Mỗi adapter còn bị chặn trần 9 giây trong `service.ts`. Quá hạn thì trang render với những gì đã có và nói rõ
+thiếu gì, thay vì chờ nguồn chậm nhất.
 
 ## Limitations
 

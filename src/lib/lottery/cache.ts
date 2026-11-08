@@ -25,7 +25,19 @@ export const TTL = {
   history: 24 * 60 * 60 * 1000
 };
 
-export function getCached<T>(key: string, ttlMs: number, loader: () => Promise<T>, options: CacheOptions = {}) {
+/** Until a resolver can see the value, the entry lives on a short lease. */
+const PENDING_LEASE_MS = 30 * 1000;
+
+/**
+ * `ttlMs` may be a function, for an answer whose shelf life depends on what came back: a draw
+ * result is good until the next draw is due, but only if it is the draw we were waiting for.
+ */
+export function getCached<T>(
+  key: string,
+  ttlMs: number | ((value: T) => number),
+  loader: () => Promise<T>,
+  options: CacheOptions = {}
+) {
   const now = Date.now();
   const existing = store.get(key) as CacheEntry<T> | undefined;
   const maxAgeMs = options.maxAgeMs ?? Number.POSITIVE_INFINITY;
@@ -39,7 +51,24 @@ export function getCached<T>(key: string, ttlMs: number, loader: () => Promise<T
     throw error;
   });
 
-  store.set(key, { storedAt: now, expiresAt: now + ttlMs, value });
+  // The lease still collapses the concurrent reads of one render without pinning a stale answer.
+  const entry: CacheEntry<T> = {
+    storedAt: now,
+    expiresAt: now + (typeof ttlMs === "number" ? ttlMs : PENDING_LEASE_MS),
+    value
+  };
+  store.set(key, entry);
+
+  if (typeof ttlMs === "function") {
+    value.then(
+      (resolved) => {
+        // Only extend the entry this call created: a purge in between must stay purged.
+        if (store.get(key) === entry) entry.expiresAt = Date.now() + ttlMs(resolved);
+      },
+      () => {}
+    );
+  }
+
   return value;
 }
 

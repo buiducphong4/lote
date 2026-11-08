@@ -1,6 +1,8 @@
+import { getCached } from "./cache";
 import { getFxRates, type FxRates } from "./fx";
+import { latestTtlMs } from "./schedule";
 import { adapters, games, isLotteryGameId } from "./registry";
-import type { HistoryQuery, LotteryDraw, LotteryGameId, NextDraw } from "./types";
+import type { HistoryQuery, LotteryAdapter, LotteryDraw, LotteryGameId, NextDraw } from "./types";
 
 export async function getGames() {
   return games;
@@ -43,7 +45,7 @@ export async function getLatest(gameId?: LotteryGameId) {
 
       // The upcoming jackpot is a bonus: a source that cannot supply it must not sink the result.
       const [latest, next] = await Promise.all([
-        withinBudget(adapter.getLatest(), unavailable),
+        withinBudget(cachedLatest(adapter), unavailable),
         withinBudget(adapter.getNext?.() ?? Promise.resolve(null), null)
       ]);
 
@@ -56,6 +58,21 @@ export async function getLatest(gameId?: LotteryGameId) {
     nextDraws: settled.flatMap((result) => (result?.next?.data ? [result.next.data] : [])) as NextDraw[],
     warnings: dedupe(settled.flatMap((result) => result?.latest.warnings ?? []))
   };
+}
+
+/**
+ * Holds a game's latest draw for as long as its schedule says nothing can change. A failed load is
+ * held briefly instead, so a source that comes back is picked up without a wait, and never pinned
+ * for the hours a real result would earn.
+ */
+const FAILED_LOAD_TTL_MS = 60 * 1000;
+
+function cachedLatest(adapter: LotteryAdapter) {
+  return getCached(
+    `schedule:${adapter.gameId}`,
+    (result) => (result.data ? latestTtlMs(adapter.gameId, result.data.drawDate) : FAILED_LOAD_TTL_MS),
+    () => adapter.getLatest()
+  );
 }
 
 export async function getHistory(gameId: LotteryGameId, query: HistoryQuery) {

@@ -7,8 +7,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getGame } from "@/lib/lottery/games";
 import { getGames, getLatest, parseGameId } from "@/lib/lottery/service";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+/**
+ * The game tab lives in the query string, so this page is rendered per request rather than served
+ * from a prerender the way the dashboard is. It still rides the same caches underneath: getLatest
+ * holds each game's result for as long as its draw schedule says nothing can change.
+ */
+export const revalidate = 120;
 
 export default async function LatestPage({
   searchParams

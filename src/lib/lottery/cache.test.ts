@@ -57,3 +57,40 @@ describe("getCached", () => {
     expect(loader).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("getCached with a TTL that depends on the value", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    clearLotteryCache();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("holds the entry for as long as the resolved value earns", async () => {
+    const loader = vi.fn(async () => "value");
+    const ttl = vi.fn(() => 5 * 60 * 1000);
+
+    await getCached("k", ttl, loader);
+    expect(ttl).toHaveBeenCalledWith("value");
+
+    vi.advanceTimersByTime(4 * 60 * 1000);
+    await getCached("k", ttl, loader);
+    expect(loader).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(2 * 60 * 1000);
+    await getCached("k", ttl, loader);
+    expect(loader).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not revive an entry purged while its loader was in flight", async () => {
+    const loader = vi.fn(async () => "value");
+    const pending = getCached("k", () => 60 * 60 * 1000, loader);
+    clearLotteryCache();
+    await pending;
+
+    await getCached("k", () => 60 * 60 * 1000, loader);
+    expect(loader).toHaveBeenCalledTimes(2);
+  });
+});

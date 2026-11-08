@@ -7,6 +7,9 @@
  * Only connection-level failures count. An HTTP error means the host is answering, and another
  * path on it may well work.
  */
+export const UPSTREAM_CACHE_TAG = "lottery-upstream";
+const UPSTREAM_REVALIDATE_SECONDS = 60;
+
 const HOST_COOLDOWN_MS = 60 * 1000;
 const coolingHosts = new Map<string, number>();
 
@@ -41,7 +44,11 @@ export async function fetchWithTimeout(url: string, init: RequestInit = {}, time
           Accept: "application/json,text/html;q=0.9,*/*;q=0.8",
           ...(init.headers ?? {})
         },
-        next: { revalidate: 0 }
+        // `revalidate: 0` here would opt every page that renders a draw out of static generation,
+        // and those pages are what lets a cold instance answer without waiting on anything. Our own
+        // schedule-aware cache decides when a request is worth making; this layer only has to not
+        // stand in the way. The tag lets a deliberate refresh clear it.
+        next: { revalidate: UPSTREAM_REVALIDATE_SECONDS, tags: [UPSTREAM_CACHE_TAG] }
       });
     } catch (error) {
       // Aborted by our own timeout, DNS failure, refused connection: nothing came back at all.

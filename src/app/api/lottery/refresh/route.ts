@@ -1,6 +1,7 @@
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { clearLatestLotteryCache } from "@/lib/lottery/cache";
-import { clearHostCooldowns } from "@/lib/lottery/fetcher";
+import { clearHostCooldowns, UPSTREAM_CACHE_TAG } from "@/lib/lottery/fetcher";
 
 export const dynamic = "force-dynamic";
 
@@ -20,5 +21,8 @@ export async function POST() {
   clearLatestLotteryCache();
   // A deliberate refresh is also a request to give a host that just failed another chance.
   clearHostCooldowns();
+  // The pages are cached ahead of time, so dropping the in-memory entries alone would change nothing.
+  revalidateTag(UPSTREAM_CACHE_TAG);
+  for (const path of ["/", "/latest"]) revalidatePath(path);
   return NextResponse.json({ cleared: true });
 }
